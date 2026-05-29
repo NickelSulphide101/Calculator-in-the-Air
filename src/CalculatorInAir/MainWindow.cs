@@ -9,6 +9,13 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 
+// Disambiguate types between WPF and WinForms/System.Drawing namespaces
+using TextBox = System.Windows.Controls.TextBox;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using Color = System.Windows.Media.Color;
+using Point = System.Windows.Point;
+using MessageBox = System.Windows.MessageBox;
+
 namespace CalculatorInAir
 {
     public class MainWindow : Window
