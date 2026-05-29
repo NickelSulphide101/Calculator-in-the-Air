@@ -11,7 +11,7 @@
     <AssemblyName>CalculatorInAir</AssemblyName>
     <RootNamespace>CalculatorInAir</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
