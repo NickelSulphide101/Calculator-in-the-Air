@@ -40,7 +40,7 @@ It is packaged as a single portable `.exe` file that requires **no installation*
   - Full support for **Simplified Chinese (简体中文)** and **British English (en-GB)**.
   - Automatically matches the system culture or can be set manually.
 - **Portable & Dependency Free**:
-  - Built with .NET 8.0 WPF.
+  - Built with .NET 10.0 WPF.
   - Bundled as a self-contained single `.exe` file (~50MB) containing the runtime. Works on any 64-bit Windows machine.
 
 ### Supported Math Expressions
@@ -87,7 +87,7 @@ If you ever wish to reset settings to default, simply delete this file or click 
 
 ### Building Locally
 
-If you wish to build the executable from source code, make sure you have the [.NET 8.0 SDK](https://dotnet.microsoft.com/download) installed on your system.
+If you wish to build the executable from source code, make sure you have the [.NET 10.0 SDK](https://dotnet.microsoft.com/download) installed on your system.
 
 Open a command prompt (cmd/PowerShell) in the project directory and run:
 
@@ -139,7 +139,7 @@ The output portable binary `CalculatorInAir.exe` will be located inside the `./p
   - 完整支持**简体中文**与**英国英语 (en-GB)**。
   - 自动匹配系统语言，亦可在设置面板中手动进行切换。
 - **纯绿色免安装**：
-  - 基于 .NET 8.0 WPF 构建。
+  - 基于 .NET 10.0 WPF 构建。
   - 打包为包含完整运行时的独立单 `.exe` 文件（约 50MB），在任何 64 位 Windows 电脑上均可即开即用。
 
 ### 支持的数学表达式
@@ -186,7 +186,7 @@ The output portable binary `CalculatorInAir.exe` will be located inside the `./p
 
 ### 本地编译
 
-如果您希望从源码编译该可执行文件，请确保系统已安装 [.NET 8.0 SDK](https://dotnet.microsoft.com/download)。
+如果您希望从源码编译该可执行文件，请确保系统已安装 [.NET 10.0 SDK](https://dotnet.microsoft.com/download)。
 
 在项目根目录下打开命令行（cmd/PowerShell）并运行：
 
