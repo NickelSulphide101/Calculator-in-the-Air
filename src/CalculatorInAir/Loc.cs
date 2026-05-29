@@ -29,9 +29,9 @@ namespace CalculatorInAir
 
         public static string Get(string key)
         {
-            if (Application.Current != null && Application.Current.Resources.Contains(key))
+            if (System.Windows.Application.Current != null && System.Windows.Application.Current.Resources.Contains(key))
             {
-                return Application.Current.Resources[key] as string ?? key;
+                return System.Windows.Application.Current.Resources[key] as string ?? key;
             }
 
             return GetFallback(key, GetActiveLanguage());
@@ -52,9 +52,9 @@ namespace CalculatorInAir
             string filename = active == Language.zh_CN ? "Strings.zh-CN.xaml" : "Strings.en-GB.xaml";
             var uri = new Uri($"/CalculatorInAir;component/Locales/{filename}", UriKind.Relative);
 
-            if (Application.Current == null) return;
+            if (System.Windows.Application.Current == null) return;
 
-            var merged = Application.Current.Resources.MergedDictionaries;
+            var merged = System.Windows.Application.Current.Resources.MergedDictionaries;
             ResourceDictionary? oldDict = null;
 
             foreach (var d in merged)

@@ -170,7 +170,7 @@ namespace CalculatorInAir
                 BlurRadius = 25,
                 ShadowDepth = 0
             };
-            _shadowEffect.SetResourceReference(DropShadowEffect.OpacityProperty, "ShadowOpacity");
+            _shadowEffect.SetValue(DropShadowEffect.OpacityProperty, new DynamicResourceExtension("ShadowOpacity"));
             _mainBorder.Effect = _shadowEffect;
 
             // Allow moving window by dragging
@@ -300,7 +300,7 @@ namespace CalculatorInAir
             _resultTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "ResultForegroundBrush");
             
             // Tabular lining figures to prevent numeric width jitter
-            System.Windows.Documents.Typography.SetNumAlignment(_resultTextBlock, System.Windows.NumAlignment.Tabular);
+            System.Windows.Documents.Typography.SetNumeralAlignment(_resultTextBlock, System.Windows.NumeralAlignment.Tabular);
 
             Grid.SetColumn(_resultTextBlock, 1);
             resultContentGrid.Children.Add(_resultTextBlock);
