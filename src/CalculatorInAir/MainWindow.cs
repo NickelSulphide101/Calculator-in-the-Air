@@ -15,6 +15,10 @@ using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
 using MessageBox = System.Windows.MessageBox;
+using Brushes = System.Windows.Media.Brushes;
+using FontFamily = System.Windows.Media.FontFamily;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using Clipboard = System.Windows.Clipboard;
 
 namespace CalculatorInAir
 {
@@ -363,7 +367,7 @@ namespace CalculatorInAir
                 From = 0,
                 To = 1,
                 Duration = TimeSpan.FromMilliseconds(180),
-                EasingFunction = new DecelerationEase()
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
 
             var slideDown = new DoubleAnimation
@@ -371,7 +375,7 @@ namespace CalculatorInAir
                 From = -15,
                 To = 0,
                 Duration = TimeSpan.FromMilliseconds(180),
-                EasingFunction = new DecelerationEase()
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
 
             this.BeginAnimation(Window.OpacityProperty, fadeIn);
@@ -389,7 +393,7 @@ namespace CalculatorInAir
                 From = this.Opacity,
                 To = 0,
                 Duration = TimeSpan.FromMilliseconds(120),
-                EasingFunction = new AccelerationEase()
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
             };
 
             var slideUp = new DoubleAnimation
@@ -397,7 +401,7 @@ namespace CalculatorInAir
                 From = _translateTransform.Y,
                 To = -10,
                 Duration = TimeSpan.FromMilliseconds(120),
-                EasingFunction = new AccelerationEase()
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
             };
 
             fadeOut.Completed += (s, e) =>
@@ -475,7 +479,7 @@ namespace CalculatorInAir
                 From = _resultBorder.Opacity,
                 To = 1,
                 Duration = TimeSpan.FromMilliseconds(150),
-                EasingFunction = new DecelerationEase()
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
             _resultBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
         }
