@@ -300,7 +300,7 @@ namespace CalculatorInAir
             _resultTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "ResultForegroundBrush");
             
             // Tabular lining figures to prevent numeric width jitter
-            System.Windows.Documents.Typography.SetNumeralAlignment(_resultTextBlock, System.Windows.NumeralAlignment.Tabular);
+            System.Windows.Documents.Typography.SetNumeralAlignment(_resultTextBlock, System.Windows.FontNumeralAlignment.Tabular);
 
             Grid.SetColumn(_resultTextBlock, 1);
             resultContentGrid.Children.Add(_resultTextBlock);
