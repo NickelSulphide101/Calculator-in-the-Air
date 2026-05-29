@@ -45,6 +45,7 @@ jobs:
         files: ./publish/CalculatorInAir.exe
         draft: false
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        generate_release_notes: true
+        generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        body: ${{ startsWith(github.ref, 'refs/tags/v') && '' || 'Latest rolling build for Calculator in the Air.' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
