@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,6 +29,9 @@ namespace CalculatorInAir
         private const int WM_HOTKEY = 0x0312;
         private const int WM_USER_WAKEUP = 0x0400 + 101;
 
+        private const double HeightCollapsed = 109;
+        private const double HeightExpanded = 166;
+
         // Settings & State
         private readonly AppSettings _settings;
         private bool _isSettingsWindowOpen = false;
@@ -48,6 +52,33 @@ namespace CalculatorInAir
         // Win32 Interop Variables
         private IntPtr _hwnd;
         private HwndSource? _hwndSource;
+        private readonly bool _isWin11OrGreater;
+
+        // History
+        private readonly List<string> _history = new List<string>();
+        private int _historyIndex = -1;
+        private string _tempInput = "";
+
+        // Win32 P/Invokes for backdrop and version
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct OSVERSIONINFOEX
+        {
+            public int dwOSVersionInfoSize;
+            public int dwMajorVersion;
+            public int dwMinorVersion;
+            public int dwBuildNumber;
+            public int dwPlatformId;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szCSDVersion;
+            public ushort wServicePackMajor;
+            public ushort wServicePackMinor;
+            public ushort wSuiteMask;
+            public byte wProductType;
+            public byte wReserved;
+        }
+
+        [DllImport("ntdll.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern int RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -55,59 +86,91 @@ namespace CalculatorInAir
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+        private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+        private const int DWMSBT_TRANSLUCENTAUTHORITATIVE = 3; // Acrylic
+
+        private static bool IsWindows11OrGreater()
+        {
+            try
+            {
+                var os = new OSVERSIONINFOEX();
+                os.dwOSVersionInfoSize = Marshal.SizeOf(os);
+                if (RtlGetVersion(ref os) == 0)
+                {
+                    return os.dwBuildNumber >= 22000;
+                }
+            }
+            catch { }
+            return false;
+        }
+
         public MainWindow(AppSettings settings)
         {
             _settings = settings;
+            _isWin11OrGreater = IsWindows11OrGreater();
+
+            if (_isWin11OrGreater)
+            {
+                AllowsTransparency = false;
+                WindowStyle = WindowStyle.None;
+
+                // Setup WindowChrome to remove client borders while allows transparency is false
+                var chrome = new System.Windows.Shell.WindowChrome
+                {
+                    CaptionHeight = 0,
+                    ResizeBorderThickness = new Thickness(0),
+                    CornerRadius = new CornerRadius(0),
+                    GlassFrameThickness = new Thickness(-1)
+                };
+                System.Windows.Shell.WindowChrome.SetWindowChrome(this, chrome);
+            }
+            else
+            {
+                AllowsTransparency = true;
+                WindowStyle = WindowStyle.None;
+            }
 
             InitializeUI();
-            
-            // Focus events
             Deactivated += MainWindow_Deactivated;
         }
 
         private void InitializeUI()
         {
             // Configure basic window parameters
-            WindowStyle = WindowStyle.None;
-            AllowsTransparency = true;
             Background = Brushes.Transparent;
             ResizeMode = ResizeMode.NoResize;
             ShowInTaskbar = false;
             Topmost = true;
             Width = 600;
+            Height = HeightCollapsed;
             Title = "Calculator in the Air";
-            SizeToContent = SizeToContent.Height;
+            SizeToContent = SizeToContent.Manual;
             WindowStartupLocation = WindowStartupLocation.Manual;
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Arial");
 
             // 1. Root Container Border
             _mainBorder = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(242, 20, 20, 25)), // Translucent dark background
                 CornerRadius = new CornerRadius(16),
                 BorderThickness = new Thickness(1.5),
                 Margin = new Thickness(25) // Leave space for the drop shadow
             };
 
-            // Setup border gradient outline (violet to cyan glow edge)
-            var borderGradient = new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(1, 1)
-            };
-            borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 167, 139, 250), 0.0)); // Violet
-            borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 103, 232, 249), 0.5)); // Cyan
-            borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(26, 255, 255, 255), 1.0));  // Subtle white
-            _mainBorder.BorderBrush = borderGradient;
+            // Set resource references for dynamic styling (XAML-separated)
+            _mainBorder.SetResourceReference(Border.BackgroundProperty, "WindowBackgroundBrush");
+            _mainBorder.SetResourceReference(Border.BorderBrushProperty, "WindowBorderBrush");
 
             // Setup modern soft drop shadow
             _shadowEffect = new DropShadowEffect
             {
                 Color = Colors.Black,
                 BlurRadius = 25,
-                ShadowDepth = 0,
-                Opacity = 0.55
+                ShadowDepth = 0
             };
+            _shadowEffect.SetResourceReference(DropShadowEffect.OpacityProperty, "ShadowOpacity");
             _mainBorder.Effect = _shadowEffect;
 
             // Allow moving window by dragging
@@ -119,7 +182,7 @@ namespace CalculatorInAir
                 }
             };
 
-            // Setup transform for slide animations
+            // Setup transform for slide and shake animations
             _translateTransform = new TranslateTransform();
             _mainBorder.RenderTransform = _translateTransform;
 
@@ -144,9 +207,7 @@ namespace CalculatorInAir
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            // Violet to Cyan gradient fill for the icon
-            var iconGradient = new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 45);
-            _calculatorIcon.Fill = iconGradient;
+            _calculatorIcon.SetResourceReference(Path.FillProperty, "CalculatorIconBrush");
             inputGrid.Children.Add(_calculatorIcon);
             Grid.SetColumn(_calculatorIcon, 0);
 
@@ -156,11 +217,11 @@ namespace CalculatorInAir
             // Placeholder Text
             _placeholderTextBlock = new TextBlock
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125)),
                 FontSize = 18,
                 VerticalAlignment = VerticalAlignment.Center,
                 IsHitTestVisible = false // Click-through
             };
+            _placeholderTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "PlaceholderForegroundBrush");
             textBoxContainer.Children.Add(_placeholderTextBlock);
 
             // Active Input Textbox
@@ -168,13 +229,14 @@ namespace CalculatorInAir
             {
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Foreground = Brushes.White,
-                CaretBrush = new SolidColorBrush(Color.FromRgb(167, 139, 250)), // Violet caret
                 FontSize = 18,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                FontWeight = FontWeights.Normal,
-                SelectionBrush = new SolidColorBrush(Color.FromArgb(100, 139, 92, 246))
+                FontWeight = FontWeights.Normal
             };
+            _inputTextBox.SetResourceReference(TextBox.ForegroundProperty, "InputForegroundBrush");
+            _inputTextBox.SetResourceReference(TextBox.CaretBrushProperty, "InputCaretBrush");
+            _inputTextBox.SetResourceReference(TextBox.SelectionBrushProperty, "InputSelectionBrush");
+
             _inputTextBox.TextChanged += InputTextBox_TextChanged;
             _inputTextBox.PreviewKeyDown += InputTextBox_PreviewKeyDown;
             textBoxContainer.Children.Add(_inputTextBox);
@@ -200,9 +262,9 @@ namespace CalculatorInAir
             _separator = new Border
             {
                 Height = 1,
-                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
                 Margin = new Thickness(15, 0, 15, 0)
             };
+            _separator.SetResourceReference(Border.BackgroundProperty, "SeparatorBrush");
             Grid.SetRow(_separator, 0);
             resultPanelGrid.Children.Add(_separator);
 
@@ -216,17 +278,17 @@ namespace CalculatorInAir
             _equalsLabel = new TextBlock
             {
                 Text = "=",
-                Foreground = new SolidColorBrush(Color.FromRgb(167, 139, 250)),
                 FontSize = 22,
                 FontWeight = FontWeights.Bold,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(15, 0, 5, 0)
             };
+            _equalsLabel.SetResourceReference(TextBlock.ForegroundProperty, "EqualsLabelBrush");
             Grid.SetColumn(_equalsLabel, 0);
             resultContentGrid.Children.Add(_equalsLabel);
 
-            // Main Result display TextBlock (with gorgeous Gradient)
+            // Main Result display TextBlock
             _resultTextBlock = new TextBlock
             {
                 FontSize = 22,
@@ -235,25 +297,22 @@ namespace CalculatorInAir
                 FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI, Arial"),
                 Margin = new Thickness(5, 0, 10, 0)
             };
-            var resultGradient = new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(1, 0)
-            };
-            resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(167, 139, 250), 0.0)); // Violet
-            resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(103, 232, 249), 1.0)); // Cyan
-            _resultTextBlock.Foreground = resultGradient;
+            _resultTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "ResultForegroundBrush");
+            
+            // Tabular lining figures to prevent numeric width jitter
+            System.Windows.Documents.Typography.SetNumAlignment(_resultTextBlock, System.Windows.NumAlignment.Tabular);
+
             Grid.SetColumn(_resultTextBlock, 1);
             resultContentGrid.Children.Add(_resultTextBlock);
 
             // Action hints on the right
             _hintTextBlock = new TextBlock
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125)),
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 20, 0)
             };
+            _hintTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "HintForegroundBrush");
             Grid.SetColumn(_hintTextBlock, 2);
             resultContentGrid.Children.Add(_hintTextBlock);
 
@@ -287,6 +346,13 @@ namespace CalculatorInAir
             _hwndSource.AddHook(HwndHook);
 
             RegisterHotkey();
+
+            // Enable Win11 Native Backdrop
+            if (_isWin11OrGreater)
+            {
+                int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
+                DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+            }
         }
 
         protected override void OnClosed(EventArgs e)
@@ -309,7 +375,7 @@ namespace CalculatorInAir
             if (_settings.Ctrl) modifiers |= 0x0002;
             if (_settings.Shift) modifiers |= 0x0004;
             if (_settings.Win) modifiers |= 0x0008;
-            modifiers |= 0x4000; // MOD_NOREPEAT - prevents holding down hotkey spamming the hook
+            modifiers |= 0x4000; // MOD_NOREPEAT
 
             uint vk = (uint)_settings.VirtualKey;
 
@@ -364,7 +430,7 @@ namespace CalculatorInAir
 
             // Slide and fade-in animation
             this.Opacity = 0;
-            _translateTransform.Y = -15; // Offset upwards by 15px
+            _translateTransform.Y = -15;
 
             var fadeIn = new DoubleAnimation
             {
@@ -388,10 +454,8 @@ namespace CalculatorInAir
 
         public void HideWindow()
         {
-            // Close settings if it happens to be open to prevent layout glitches
             if (_isSettingsWindowOpen) return;
 
-            // Slide and fade-out animation
             var fadeOut = new DoubleAnimation
             {
                 From = this.Opacity,
@@ -411,6 +475,9 @@ namespace CalculatorInAir
             fadeOut.Completed += (s, e) =>
             {
                 this.Hide();
+                // Reset to collapsed height for next show
+                Height = HeightCollapsed;
+                HideResultBorder();
             };
 
             this.BeginAnimation(Window.OpacityProperty, fadeOut);
@@ -419,11 +486,9 @@ namespace CalculatorInAir
 
         private void UpdatePositionToActiveMonitor()
         {
-            // Find monitor where cursor is
             var mousePos = System.Windows.Forms.Cursor.Position;
             var activeScreen = System.Windows.Forms.Screen.FromPoint(mousePos);
 
-            // Compute DPI factor to convert pixel bounds to WPF Device Independent Units (DIPs)
             double dpiX = 1.0;
             double dpiY = 1.0;
             
@@ -440,15 +505,18 @@ namespace CalculatorInAir
             double screenTop = activeScreen.WorkingArea.Top / dpiY;
 
             this.Left = screenLeft + (screenWidth - this.Width) / 2;
-            this.Top = screenTop + (screenHeight * 0.20); // 20% down from top
+            this.Top = screenTop + (screenHeight * 0.20);
         }
 
         private void InputTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             string text = _inputTextBox.Text.Trim();
 
-            // Toggle placeholder
             _placeholderTextBlock.Visibility = string.IsNullOrEmpty(_inputTextBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+
+            // Restore error colors back to theme dynamic resources
+            _resultTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "ResultForegroundBrush");
+            _equalsLabel.SetResourceReference(TextBlock.ForegroundProperty, "EqualsLabelBrush");
 
             if (string.IsNullOrEmpty(text))
             {
@@ -458,7 +526,6 @@ namespace CalculatorInAir
 
             try
             {
-                // Try evaluating math expression
                 double val = MathParser.Evaluate(text);
                 string formatted = MathParser.FormatResult(val, _settings.DecimalPlaces);
 
@@ -467,7 +534,6 @@ namespace CalculatorInAir
             }
             catch
             {
-                // Silently hide result if it is invalid / incomplete
                 HideResultBorder();
             }
         }
@@ -486,15 +552,44 @@ namespace CalculatorInAir
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
             _resultBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+
+            // Animate Window height expansion smoothly
+            var heightAnimation = new DoubleAnimation
+            {
+                From = Height,
+                To = HeightExpanded,
+                Duration = TimeSpan.FromMilliseconds(180),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            BeginAnimation(Window.HeightProperty, heightAnimation);
         }
 
         private void HideResultBorder()
         {
             if (_resultBorder.Visibility == Visibility.Collapsed) return;
 
-            _resultBorder.Visibility = Visibility.Collapsed;
-            _resultBorder.Opacity = 0;
-            _resultBorder.BeginAnimation(UIElement.OpacityProperty, null); // Stop animations
+            var fadeOut = new DoubleAnimation
+            {
+                From = _resultBorder.Opacity,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(120),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, e) =>
+            {
+                _resultBorder.Visibility = Visibility.Collapsed;
+            };
+            _resultBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+
+            // Animate Window height collapse smoothly
+            var heightAnimation = new DoubleAnimation
+            {
+                From = Height,
+                To = HeightCollapsed,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            };
+            BeginAnimation(Window.HeightProperty, heightAnimation);
         }
 
         private void InputTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -506,23 +601,101 @@ namespace CalculatorInAir
             }
             else if (e.Key == Key.Enter)
             {
-                if (_resultBorder.Visibility == Visibility.Visible && !string.IsNullOrEmpty(_resultTextBlock.Text))
+                string text = _inputTextBox.Text.Trim();
+                if (!string.IsNullOrEmpty(text))
                 {
-                    if (_settings.CopyOnEnter)
+                    try
                     {
-                        try
+                        double val = MathParser.Evaluate(text);
+                        string formatted = MathParser.FormatResult(val, _settings.DecimalPlaces);
+
+                        if (_settings.CopyOnEnter)
                         {
-                            Clipboard.SetText(_resultTextBlock.Text);
+                            try
+                            {
+                                Clipboard.SetText(formatted);
+                            }
+                            catch { }
                         }
-                        catch
-                        {
-                            // In case of clipboard locking issues
-                        }
+
+                        AddToHistory(_inputTextBox.Text); // save the full text typed
+                        HideWindow();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Play shake animation and display error message on enter key failure
+                        ShowErrorFeedback(ex.Message);
                     }
                 }
-                HideWindow();
+                else
+                {
+                    HideWindow();
+                }
                 e.Handled = true;
             }
+            else if (e.Key == Key.Up)
+            {
+                if (_history.Count > 0 && _historyIndex > 0)
+                {
+                    if (_historyIndex == _history.Count)
+                    {
+                        _tempInput = _inputTextBox.Text;
+                    }
+                    _historyIndex--;
+                    _inputTextBox.Text = _history[_historyIndex];
+                    _inputTextBox.CaretIndex = _inputTextBox.Text.Length;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Down)
+            {
+                if (_historyIndex < _history.Count)
+                {
+                    _historyIndex++;
+                    if (_historyIndex == _history.Count)
+                    {
+                        _inputTextBox.Text = _tempInput;
+                    }
+                    else
+                    {
+                        _inputTextBox.Text = _history[_historyIndex];
+                    }
+                    _inputTextBox.CaretIndex = _inputTextBox.Text.Length;
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void ShowErrorFeedback(string message)
+        {
+            _resultTextBlock.Text = message;
+            _resultTextBlock.Foreground = Brushes.Tomato;
+            _equalsLabel.Foreground = Brushes.Tomato;
+
+            ShowResultBorder();
+
+            // Perform shake keyframe animation
+            var shakeAnimation = new DoubleAnimationUsingKeyFrames();
+            shakeAnimation.Duration = TimeSpan.FromMilliseconds(400);
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(-8, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(50))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(8, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(-8, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(150))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(8, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(-4, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(250))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(4, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(300))));
+            shakeAnimation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(350))));
+
+            _translateTransform.BeginAnimation(TranslateTransform.XProperty, shakeAnimation);
+        }
+
+        private void AddToHistory(string expr)
+        {
+            if (_history.Count == 0 || _history[_history.Count - 1] != expr)
+            {
+                _history.Add(expr);
+            }
+            _historyIndex = _history.Count;
         }
 
         private void MainWindow_Deactivated(object? sender, EventArgs e)
@@ -540,17 +713,14 @@ namespace CalculatorInAir
             _isSettingsWindowOpen = true;
             var settingsWindow = new SettingsWindow(_settings, () =>
             {
-                // Settings saved callback: re-register hotkey, re-apply UI language text
                 RegisterHotkey();
                 ApplyLanguage();
                 (System.Windows.Application.Current as App)?.OnSettingsSaved();
             });
 
-            // Re-enable deactivation hide when the settings window closes
             settingsWindow.Closed += (s, e) =>
             {
                 _isSettingsWindowOpen = false;
-                // Refocus input text box on main window
                 if (this.IsVisible)
                 {
                     _inputTextBox.Focus();
@@ -562,106 +732,8 @@ namespace CalculatorInAir
 
         public void ApplyTheme(bool isDark)
         {
-            if (isDark)
-            {
-                _mainBorder.Background = new SolidColorBrush(Color.FromArgb(242, 20, 20, 25));
-
-                var borderGradient = new LinearGradientBrush
-                {
-                    StartPoint = new Point(0, 0),
-                    EndPoint = new Point(1, 1)
-                };
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 167, 139, 250), 0.0)); // Violet
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 103, 232, 249), 0.5)); // Cyan
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(26, 255, 255, 255), 1.0));  // Subtle white
-                _mainBorder.BorderBrush = borderGradient;
-
-                if (_shadowEffect != null)
-                {
-                    _shadowEffect.Opacity = 0.55;
-                }
-
-                if (_calculatorIcon != null)
-                {
-                    _calculatorIcon.Fill = new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 45);
-                }
-
-                _placeholderTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125));
-                _inputTextBox.Foreground = Brushes.White;
-                _inputTextBox.CaretBrush = new SolidColorBrush(Color.FromRgb(167, 139, 250));
-                _inputTextBox.SelectionBrush = new SolidColorBrush(Color.FromArgb(100, 139, 92, 246));
-
-                if (_separator != null)
-                {
-                    _separator.Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
-                }
-
-                if (_equalsLabel != null)
-                {
-                    _equalsLabel.Foreground = new SolidColorBrush(Color.FromRgb(167, 139, 250));
-                }
-
-                var resultGradient = new LinearGradientBrush
-                {
-                    StartPoint = new Point(0, 0),
-                    EndPoint = new Point(1, 0)
-                };
-                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(167, 139, 250), 0.0)); // Violet
-                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(103, 232, 249), 1.0)); // Cyan
-                _resultTextBlock.Foreground = resultGradient;
-
-                _hintTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125));
-            }
-            else
-            {
-                _mainBorder.Background = new SolidColorBrush(Color.FromArgb(242, 245, 245, 247));
-
-                var borderGradient = new LinearGradientBrush
-                {
-                    StartPoint = new Point(0, 0),
-                    EndPoint = new Point(1, 1)
-                };
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 139, 92, 246), 0.0)); // Violet
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 6, 182, 212), 0.5));  // Cyan
-                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(26, 0, 0, 0), 1.0));      // Subtle black
-                _mainBorder.BorderBrush = borderGradient;
-
-                if (_shadowEffect != null)
-                {
-                    _shadowEffect.Opacity = 0.15;
-                }
-
-                if (_calculatorIcon != null)
-                {
-                    _calculatorIcon.Fill = new LinearGradientBrush(Color.FromRgb(124, 58, 237), Color.FromRgb(13, 148, 136), 45);
-                }
-
-                _placeholderTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(120, 125, 135));
-                _inputTextBox.Foreground = new SolidColorBrush(Color.FromRgb(30, 30, 35));
-                _inputTextBox.CaretBrush = new SolidColorBrush(Color.FromRgb(124, 58, 237));
-                _inputTextBox.SelectionBrush = new SolidColorBrush(Color.FromArgb(50, 139, 92, 246));
-
-                if (_separator != null)
-                {
-                    _separator.Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0));
-                }
-
-                if (_equalsLabel != null)
-                {
-                    _equalsLabel.Foreground = new SolidColorBrush(Color.FromRgb(124, 58, 237));
-                }
-
-                var resultGradient = new LinearGradientBrush
-                {
-                    StartPoint = new Point(0, 0),
-                    EndPoint = new Point(1, 0)
-                };
-                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(124, 58, 237), 0.0)); // Violet
-                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(13, 148, 136), 1.0)); // Cyan
-                _resultTextBlock.Foreground = resultGradient;
-
-                _hintTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(120, 125, 135));
-            }
+            // Styling is managed dynamically via XAML ResourceDictionaries!
+            // WPF automatic DynamicResource lookup triggers updates instantly.
         }
     }
 }

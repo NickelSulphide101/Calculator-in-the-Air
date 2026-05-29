@@ -33,9 +33,49 @@ namespace CalculatorInAir
             }
         }
 
+        public static double LastResult { get; set; } = 0.0;
+
         public static double Evaluate(string expression)
         {
-            var tokens = Tokenize(expression);
+            string trimmed = expression.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                throw new ArgumentException("Empty expression");
+
+            // Check for unit conversion split
+            string[]? parts = SplitByConversion(trimmed);
+            if (parts != null && parts.Length == 2)
+            {
+                string leftSide = parts[0].Trim();
+                string targetUnit = parts[1].Trim();
+
+                // Find the unit at the end of leftSide
+                int i = leftSide.Length - 1;
+                while (i >= 0 && char.IsWhiteSpace(leftSide[i])) i--;
+                int unitEnd = i;
+                while (i >= 0 && (char.IsLetter(leftSide[i]) || leftSide[i] == '°' || leftSide[i] == 'º' || leftSide[i] == '米' || leftSide[i] == '克' || leftSide[i] == '磅' || leftSide[i] == '码' || leftSide[i] == '里' || leftSide[i] == '度' || leftSide[i] == '文')) i--;
+                int unitStart = i + 1;
+
+                if (unitStart <= unitEnd)
+                {
+                    string sourceUnit = leftSide.Substring(unitStart, unitEnd - unitStart + 1);
+                    string mathExpr = leftSide.Substring(0, unitStart).Trim();
+
+                    // If mathExpr is empty, default to "1" (e.g. "m to cm" -> "1 m to cm")
+                    if (string.IsNullOrEmpty(mathExpr))
+                    {
+                        mathExpr = "1";
+                    }
+
+                    double val = Evaluate(mathExpr);
+                    if (Convert(val, sourceUnit, targetUnit, out double convertedVal))
+                    {
+                        LastResult = convertedVal;
+                        return convertedVal;
+                    }
+                }
+            }
+
+            var tokens = Tokenize(trimmed);
             if (tokens.Count == 0)
                 throw new ArgumentException("Empty expression");
 
@@ -47,6 +87,7 @@ namespace CalculatorInAir
                 throw new ArgumentException($"Unexpected token at the end: '{tokens[index].Value}'");
             }
 
+            LastResult = result;
             return result;
         }
 
@@ -70,6 +111,167 @@ namespace CalculatorInAir
             }
         }
 
+        private static string[]? SplitByConversion(string input)
+        {
+            int index = input.IndexOf(" to ", StringComparison.OrdinalIgnoreCase);
+            if (index != -1)
+            {
+                return new string[] { input.Substring(0, index), input.Substring(index + 4) };
+            }
+
+            index = input.IndexOf(" in ", StringComparison.OrdinalIgnoreCase);
+            if (index != -1)
+            {
+                return new string[] { input.Substring(0, index), input.Substring(index + 4) };
+            }
+
+            return null;
+        }
+
+        private enum UnitCategory
+        {
+            Length,
+            Weight,
+            Temperature
+        }
+
+        private class UnitInfo
+        {
+            public UnitCategory Category { get; }
+            public double Multiplier { get; }
+
+            public UnitInfo(UnitCategory category, double multiplier)
+            {
+                Category = category;
+                Multiplier = multiplier;
+            }
+        }
+
+        private static readonly Dictionary<string, UnitInfo> UnitDict = new Dictionary<string, UnitInfo>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Length
+            { "m", new UnitInfo(UnitCategory.Length, 1.0) },
+            { "meter", new UnitInfo(UnitCategory.Length, 1.0) },
+            { "meters", new UnitInfo(UnitCategory.Length, 1.0) },
+            { "米", new UnitInfo(UnitCategory.Length, 1.0) },
+            { "cm", new UnitInfo(UnitCategory.Length, 0.01) },
+            { "centimeter", new UnitInfo(UnitCategory.Length, 0.01) },
+            { "centimeters", new UnitInfo(UnitCategory.Length, 0.01) },
+            { "厘米", new UnitInfo(UnitCategory.Length, 0.01) },
+            { "mm", new UnitInfo(UnitCategory.Length, 0.001) },
+            { "millimeter", new UnitInfo(UnitCategory.Length, 0.001) },
+            { "millimeters", new UnitInfo(UnitCategory.Length, 0.001) },
+            { "毫米", new UnitInfo(UnitCategory.Length, 0.001) },
+            { "km", new UnitInfo(UnitCategory.Length, 1000.0) },
+            { "kilometer", new UnitInfo(UnitCategory.Length, 1000.0) },
+            { "kilometers", new UnitInfo(UnitCategory.Length, 1000.0) },
+            { "千米", new UnitInfo(UnitCategory.Length, 1000.0) },
+            { "公里", new UnitInfo(UnitCategory.Length, 1000.0) },
+            { "in", new UnitInfo(UnitCategory.Length, 0.0254) },
+            { "inch", new UnitInfo(UnitCategory.Length, 0.0254) },
+            { "inches", new UnitInfo(UnitCategory.Length, 0.0254) },
+            { "英寸", new UnitInfo(UnitCategory.Length, 0.0254) },
+            { "ft", new UnitInfo(UnitCategory.Length, 0.3048) },
+            { "foot", new UnitInfo(UnitCategory.Length, 0.3048) },
+            { "feet", new UnitInfo(UnitCategory.Length, 0.3048) },
+            { "英尺", new UnitInfo(UnitCategory.Length, 0.3048) },
+            { "yd", new UnitInfo(UnitCategory.Length, 0.9144) },
+            { "yard", new UnitInfo(UnitCategory.Length, 0.9144) },
+            { "yards", new UnitInfo(UnitCategory.Length, 0.9144) },
+            { "码", new UnitInfo(UnitCategory.Length, 0.9144) },
+            { "mi", new UnitInfo(UnitCategory.Length, 1609.344) },
+            { "mile", new UnitInfo(UnitCategory.Length, 1609.344) },
+            { "miles", new UnitInfo(UnitCategory.Length, 1609.344) },
+            { "英里", new UnitInfo(UnitCategory.Length, 1609.344) },
+
+            // Weight/Mass
+            { "kg", new UnitInfo(UnitCategory.Weight, 1.0) },
+            { "kilogram", new UnitInfo(UnitCategory.Weight, 1.0) },
+            { "kilograms", new UnitInfo(UnitCategory.Weight, 1.0) },
+            { "千克", new UnitInfo(UnitCategory.Weight, 1.0) },
+            { "公斤", new UnitInfo(UnitCategory.Weight, 1.0) },
+            { "g", new UnitInfo(UnitCategory.Weight, 0.001) },
+            { "gram", new UnitInfo(UnitCategory.Weight, 0.001) },
+            { "grams", new UnitInfo(UnitCategory.Weight, 0.001) },
+            { "克", new UnitInfo(UnitCategory.Weight, 0.001) },
+            { "mg", new UnitInfo(UnitCategory.Weight, 0.000001) },
+            { "milligram", new UnitInfo(UnitCategory.Weight, 0.000001) },
+            { "milligrams", new UnitInfo(UnitCategory.Weight, 0.000001) },
+            { "毫克", new UnitInfo(UnitCategory.Weight, 0.000001) },
+            { "lb", new UnitInfo(UnitCategory.Weight, 0.45359237) },
+            { "lbs", new UnitInfo(UnitCategory.Weight, 0.45359237) },
+            { "pound", new UnitInfo(UnitCategory.Weight, 0.45359237) },
+            { "pounds", new UnitInfo(UnitCategory.Weight, 0.45359237) },
+            { "磅", new UnitInfo(UnitCategory.Weight, 0.45359237) },
+            { "oz", new UnitInfo(UnitCategory.Weight, 0.028349523125) },
+            { "ounce", new UnitInfo(UnitCategory.Weight, 0.028349523125) },
+            { "ounces", new UnitInfo(UnitCategory.Weight, 0.028349523125) },
+            { "盎司", new UnitInfo(UnitCategory.Weight, 0.028349523125) },
+
+            // Temperature
+            { "c", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "celsius", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "摄氏度", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "f", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "fahrenheit", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "华氏度", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "k", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "kelvin", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "开尔文", new UnitInfo(UnitCategory.Temperature, 0) }
+        };
+
+        private static bool Convert(double val, string from, string to, out double result)
+        {
+            result = 0;
+            if (!UnitDict.TryGetValue(from, out var fromInfo) || !UnitDict.TryGetValue(to, out var toInfo))
+            {
+                return false;
+            }
+            if (fromInfo.Category != toInfo.Category)
+            {
+                return false;
+            }
+
+            if (fromInfo.Category == UnitCategory.Temperature)
+            {
+                double celsius = 0;
+                string fLower = from.ToLowerInvariant();
+                if (fLower == "c" || fLower == "celsius" || fLower == "摄氏度")
+                {
+                    celsius = val;
+                }
+                else if (fLower == "f" || fLower == "fahrenheit" || fLower == "华氏度")
+                {
+                    celsius = (val - 32) / 1.8;
+                }
+                else if (fLower == "k" || fLower == "kelvin" || fLower == "开尔文")
+                {
+                    celsius = val - 273.15;
+                }
+
+                string tLower = to.ToLowerInvariant();
+                if (tLower == "c" || tLower == "celsius" || tLower == "摄氏度")
+                {
+                    result = celsius;
+                }
+                else if (tLower == "f" || tLower == "fahrenheit" || tLower == "华氏度")
+                {
+                    result = celsius * 1.8 + 32;
+                }
+                else if (tLower == "k" || tLower == "kelvin" || tLower == "开尔文")
+                {
+                    result = celsius + 273.15;
+                }
+                return true;
+            }
+            else
+            {
+                double baseValue = val * fromInfo.Multiplier;
+                result = baseValue / toInfo.Multiplier;
+                return true;
+            }
+        }
+
         private static List<Token> Tokenize(string input)
         {
             var tokens = new List<Token>();
@@ -84,7 +286,6 @@ namespace CalculatorInAir
                     continue;
                 }
 
-                // Inline helper to see if implicit multiplication is applicable
                 bool ShouldImplicitMultiply(TokenType nextType)
                 {
                     if (tokens.Count == 0) return false;
@@ -105,7 +306,6 @@ namespace CalculatorInAir
                         i++;
                     }
 
-                    // Check for scientific notation (e.g., 1e-5, 2.5e+3)
                     if (i < input.Length && (input[i] == 'e' || input[i] == 'E'))
                     {
                         int lookahead = i + 1;
@@ -229,7 +429,6 @@ namespace CalculatorInAir
             if (index < tokens.Count && tokens[index].Type == TokenType.Power)
             {
                 index++;
-                // Power is right-associative (e.g. 2^3^2 = 2^(3^2))
                 double right = ParseFactor(tokens, ref index);
                 result = Math.Pow(result, right);
             }
@@ -268,7 +467,6 @@ namespace CalculatorInAir
                 string name = token.Value.ToLowerInvariant();
                 index++;
 
-                // Check if it is a function call (followed by '(')
                 if (index < tokens.Count && tokens[index].Type == TokenType.LParen)
                 {
                     index++; // consume '('
@@ -293,7 +491,6 @@ namespace CalculatorInAir
                 }
                 else
                 {
-                    // It's a constant
                     return EvaluateConstant(name);
                 }
             }
@@ -325,6 +522,8 @@ namespace CalculatorInAir
                     return Math.E;
                 case "tau":
                     return Math.PI * 2.0;
+                case "ans":
+                    return LastResult;
                 default:
                     throw new ArgumentException($"Unknown constant: '{name}'");
             }

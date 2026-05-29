@@ -21,8 +21,22 @@ namespace CalculatorInAir
         {
             base.OnStartup(e);
 
+            // 0. Load shared styles resource dictionary
+            try
+            {
+                var stylesDict = new ResourceDictionary { Source = new Uri("/CalculatorInAir;component/Themes/Styles.xaml", UriKind.Relative) };
+                Resources.MergedDictionaries.Add(stylesDict);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load Styles.xaml: {ex.Message}");
+            }
+
             // 1. Load configuration settings
             _settings = SettingsManager.Load();
+
+            // Load localized strings based on preference
+            Loc.LoadLanguage(Loc.CurrentLanguage);
 
             // 2. Initialize main search window
             _mainWindow = new MainWindow(_settings);
@@ -86,33 +100,43 @@ namespace CalculatorInAir
 
         private Icon CreateDynamicIcon()
         {
-            // Draw a beautiful 32x32 icon in memory to avoid ship-along assets
-            using (var bmp = new Bitmap(32, 32))
+            // Retrieve system-tray small icon size dynamically to handle DPI scaling crispness
+            var iconSize = System.Windows.Forms.SystemInformation.SmallIconSize;
+            int width = iconSize.Width;
+            int height = iconSize.Height;
+
+            using (var bmp = new Bitmap(width, height))
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
                     g.SmoothingMode = SmoothingMode.AntiAlias;
 
                     // Draw a beautiful rounded rectangle background with violet-blue gradient
-                    var rect = new Rectangle(2, 2, 28, 28);
+                    int margin = Math.Max(2, (int)(width * 0.0625));
+                    var rect = new Rectangle(margin, margin, width - 2 * margin, height - 2 * margin);
                     using (var brush = new LinearGradientBrush(
                         rect,
                         Color.FromArgb(139, 92, 246), // Violet
                         Color.FromArgb(59, 130, 246),  // Blue
                         45f))
                     {
-                        using (var path = GetRoundedRectPath(rect, 7))
+                        int radius = Math.Max(2, (int)(width * 0.22));
+                        using (var path = GetRoundedRectPath(rect, radius))
                         {
                             g.FillPath(brush, path);
                         }
                     }
 
                     // Draw an equal sign symbol in the middle
-                    using (var pen = new Pen(Color.White, 3))
+                    float penWidth = Math.Max(1.5f, width * 0.09375f);
+                    using (var pen = new Pen(Color.White, penWidth))
                     {
-                        // Parallel lines for the '=' sign
-                        g.DrawLine(pen, 9, 12, 23, 12);
-                        g.DrawLine(pen, 9, 18, 23, 18);
+                        float xStart = width * 0.28125f;
+                        float xEnd = width * 0.71875f;
+                        float yLine1 = height * 0.375f;
+                        float yLine2 = height * 0.5625f;
+                        g.DrawLine(pen, xStart, yLine1, xEnd, yLine1);
+                        g.DrawLine(pen, xStart, yLine2, xEnd, yLine2);
                     }
                 }
 
@@ -178,6 +202,8 @@ namespace CalculatorInAir
                 isDark = ThemeDetector.IsSystemDarkTheme();
             }
 
+            LoadThemeResource(isDark);
+
             _mainWindow?.ApplyTheme(isDark);
 
             foreach (Window window in Windows)
@@ -186,6 +212,36 @@ namespace CalculatorInAir
                 {
                     settingsWindow.ApplyTheme(isDark);
                 }
+            }
+        }
+
+        private void LoadThemeResource(bool isDark)
+        {
+            string filename = isDark ? "DarkTheme.xaml" : "LightTheme.xaml";
+            var uri = new Uri($"/CalculatorInAir;component/Themes/{filename}", UriKind.Relative);
+            
+            var merged = Resources.MergedDictionaries;
+            ResourceDictionary? oldDict = null;
+            foreach (var d in merged)
+            {
+                if (d.Source != null && (d.Source.OriginalString.Contains("DarkTheme.xaml") || d.Source.OriginalString.Contains("LightTheme.xaml")))
+                {
+                    oldDict = d;
+                    break;
+                }
+            }
+            if (oldDict != null)
+            {
+                merged.Remove(oldDict);
+            }
+            try
+            {
+                var newDict = new ResourceDictionary { Source = uri };
+                merged.Add(newDict);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load theme resource: {ex.Message}");
             }
         }
 
@@ -218,6 +274,7 @@ namespace CalculatorInAir
         // Helper trigger method called when MainWindow saves settings
         public void OnSettingsSaved()
         {
+            Loc.LoadLanguage(Loc.CurrentLanguage);
             UpdateTrayMenuTexts();
             _notifyIcon.Icon = CreateDynamicIcon(); // Redraw icon in case we add customization hooks later
             ApplyTheme(); // Ensure theme updates immediately if settings saved

@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Windows;
 
 namespace CalculatorInAir
 {
@@ -28,9 +29,62 @@ namespace CalculatorInAir
 
         public static string Get(string key)
         {
-            var active = GetActiveLanguage();
-            bool isZh = active == Language.zh_CN;
+            if (Application.Current != null && Application.Current.Resources.Contains(key))
+            {
+                return Application.Current.Resources[key] as string ?? key;
+            }
 
+            return GetFallback(key, GetActiveLanguage());
+        }
+
+        public static void LoadLanguage(Language language)
+        {
+            var active = language;
+            if (active == Language.Auto)
+            {
+                string name = CultureInfo.CurrentUICulture.Name;
+                if (name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+                    active = Language.zh_CN;
+                else
+                    active = Language.en_GB;
+            }
+
+            string filename = active == Language.zh_CN ? "Strings.zh-CN.xaml" : "Strings.en-GB.xaml";
+            var uri = new Uri($"/CalculatorInAir;component/Locales/{filename}", UriKind.Relative);
+
+            if (Application.Current == null) return;
+
+            var merged = Application.Current.Resources.MergedDictionaries;
+            ResourceDictionary? oldDict = null;
+
+            foreach (var d in merged)
+            {
+                if (d.Source != null && d.Source.OriginalString.Contains("Locales/Strings."))
+                {
+                    oldDict = d;
+                    break;
+                }
+            }
+
+            if (oldDict != null)
+            {
+                merged.Remove(oldDict);
+            }
+
+            try
+            {
+                var newDict = new ResourceDictionary { Source = uri };
+                merged.Add(newDict);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load language resources: {ex.Message}");
+            }
+        }
+
+        private static string GetFallback(string key, Language active)
+        {
+            bool isZh = active == Language.zh_CN;
             switch (key)
             {
                 case "Placeholder":
