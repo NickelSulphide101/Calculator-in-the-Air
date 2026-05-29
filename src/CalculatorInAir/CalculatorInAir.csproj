@@ -12,9 +12,6 @@
     <RootNamespace>CalculatorInAir</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
-    <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
     <ReadyToRun>true</ReadyToRun>
   </PropertyGroup>
 
