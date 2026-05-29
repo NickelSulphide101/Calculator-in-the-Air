@@ -29,6 +29,15 @@ namespace CalculatorInAir
         private ComboBox _languageComboBox = null!;
         private CheckBox _hideOnBlurCheckBox = null!;
         private CheckBox _copyOnEnterCheckBox = null!;
+        private ComboBox _themeComboBox = null!;
+        private Button _saveButton = null!;
+        private Button _cancelButton = null!;
+        private TextBlock _headerTitle = null!;
+        private List<TextBlock> _labels = new List<TextBlock>();
+        private bool _isDarkTheme = true;
+        private string _originalThemeSetting = "Auto";
+        private bool _isInitializing = true;
+        private bool _isSaved = false;
 
         // Recording state
         private bool _isRecording = false;
@@ -43,6 +52,17 @@ namespace CalculatorInAir
         {
             _settings = settings;
             _onSaveCallback = onSaveCallback;
+            _originalThemeSetting = settings.Theme;
+
+            // Determine active theme
+            bool isDark = true;
+            if (settings.Theme == "Light")
+                isDark = false;
+            else if (settings.Theme == "Dark")
+                isDark = true;
+            else
+                isDark = App.ThemeDetector.IsSystemDarkTheme();
+            _isDarkTheme = isDark;
 
             // Setup temporary recording states with current values
             _recordedCtrl = settings.Ctrl;
@@ -53,17 +73,21 @@ namespace CalculatorInAir
             _recordedDisplay = settings.HotkeyDisplay;
 
             InitializeUI();
+
+            // Apply initial theme layout
+            ApplyTheme(_isDarkTheme);
+            _isInitializing = false;
         }
 
         private void InitializeUI()
         {
             Title = Loc.Get("SettingsTitle");
             Width = 460;
-            Height = 440;
+            Height = 485;
             ResizeMode = ResizeMode.NoResize;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            Background = new SolidColorBrush(Color.FromRgb(24, 24, 28)); // Dark background
-            Foreground = Brushes.White;
+            Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(24, 24, 28) : Color.FromRgb(245, 245, 247));
+            Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Arial");
 
             // Main layout
@@ -74,14 +98,16 @@ namespace CalculatorInAir
 
             // 1. Header
             var headerPanel = new StackPanel { Margin = new Thickness(20, 15, 20, 0) };
-            var headerTitle = new TextBlock
+            _headerTitle = new TextBlock
             {
                 Text = Loc.Get("SettingsTitle").Split(" - ")[0],
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
-                Foreground = new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 0)
+                Foreground = _isDarkTheme 
+                    ? new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 0)
+                    : new LinearGradientBrush(Color.FromRgb(124, 58, 237), Color.FromRgb(13, 148, 136), 0)
             };
-            headerPanel.Children.Add(headerTitle);
+            headerPanel.Children.Add(_headerTitle);
             Grid.SetRow(headerPanel, 0);
             mainGrid.Children.Add(headerPanel);
 
@@ -89,9 +115,10 @@ namespace CalculatorInAir
             var contentGrid = new Grid { Margin = new Thickness(20, 5, 20, 5) };
             contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
             contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) }); // Hotkey
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) }); // Precision
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) }); // Language
+            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Hotkey
+            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Precision
+            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Language
+            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Theme
             contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Behaviors
 
             // 2.1 Hotkey Row
@@ -104,15 +131,15 @@ namespace CalculatorInAir
             {
                 Content = _recordedDisplay,
                 Height = 30,
-                Background = new SolidColorBrush(Color.FromRgb(40, 40, 48)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(60, 60, 72)),
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240)),
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210)),
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand,
                 FontWeight = FontWeights.SemiBold
             };
             _recordButton.Click += (s, e) => StartRecording();
-            SetupButtonHover(_recordButton, Color.FromRgb(40, 40, 48), Color.FromRgb(55, 55, 68));
+            SetupButtonHover(_recordButton, isDark => isDark ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240), isDark => isDark ? Color.FromRgb(55, 55, 68) : Color.FromRgb(220, 220, 230));
             Grid.SetRow(_recordButton, 0);
             Grid.SetColumn(_recordButton, 1);
             contentGrid.Children.Add(_recordButton);
@@ -126,9 +153,9 @@ namespace CalculatorInAir
             _precisionComboBox = new ComboBox
             {
                 Height = 30,
-                Background = new SolidColorBrush(Color.FromRgb(40, 40, 48)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(60, 60, 72)),
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(255, 255, 255)),
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210)),
                 BorderThickness = new Thickness(1)
             };
             _precisionComboBox.Items.Add(Loc.Get("PrecisionAuto"));
@@ -155,9 +182,9 @@ namespace CalculatorInAir
             _languageComboBox = new ComboBox
             {
                 Height = 30,
-                Background = new SolidColorBrush(Color.FromRgb(40, 40, 48)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(60, 60, 72)),
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(255, 255, 255)),
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210)),
                 BorderThickness = new Thickness(1)
             };
             _languageComboBox.Items.Add(Loc.Get("LanguageAuto"));
@@ -175,34 +202,65 @@ namespace CalculatorInAir
             Grid.SetColumn(_languageComboBox, 1);
             contentGrid.Children.Add(_languageComboBox);
 
-            // 2.4 Behaviors Row
+            // 2.4 Theme Row
+            var themeLabel = CreateLabel(Loc.Get("ThemeSetting"));
+            Grid.SetRow(themeLabel, 3);
+            Grid.SetColumn(themeLabel, 0);
+            contentGrid.Children.Add(themeLabel);
+
+            _themeComboBox = new ComboBox
+            {
+                Height = 30,
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(255, 255, 255)),
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210)),
+                BorderThickness = new Thickness(1)
+            };
+            _themeComboBox.Items.Add(Loc.Get("ThemeAuto"));
+            _themeComboBox.Items.Add(Loc.Get("ThemeDark"));
+            _themeComboBox.Items.Add(Loc.Get("ThemeLight"));
+
+            if (_settings.Theme == "Dark")
+                _themeComboBox.SelectedIndex = 1;
+            else if (_settings.Theme == "Light")
+                _themeComboBox.SelectedIndex = 2;
+            else
+                _themeComboBox.SelectedIndex = 0;
+
+            _themeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
+
+            Grid.SetRow(_themeComboBox, 3);
+            Grid.SetColumn(_themeComboBox, 1);
+            contentGrid.Children.Add(_themeComboBox);
+
+            // 2.5 Behaviors Row
             var behaviorLabel = CreateLabel(Loc.Get("Behavior"));
             behaviorLabel.Margin = new Thickness(0, 10, 0, 5);
-            Grid.SetRow(behaviorLabel, 3);
+            Grid.SetRow(behaviorLabel, 4);
             Grid.SetColumn(behaviorLabel, 0);
             contentGrid.Children.Add(behaviorLabel);
 
             var behaviorPanel = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
-            
+
             _hideOnBlurCheckBox = new CheckBox
             {
                 Content = Loc.Get("HideOnBlur"),
-                Foreground = Brushes.White,
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
                 IsChecked = _settings.HideOnBlur,
                 Margin = new Thickness(0, 5, 0, 8)
             };
-            
+
             _copyOnEnterCheckBox = new CheckBox
             {
                 Content = Loc.Get("CopyOnEnter"),
-                Foreground = Brushes.White,
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
                 IsChecked = _settings.CopyOnEnter,
                 Margin = new Thickness(0, 5, 0, 5)
             };
 
             behaviorPanel.Children.Add(_hideOnBlurCheckBox);
             behaviorPanel.Children.Add(_copyOnEnterCheckBox);
-            Grid.SetRow(behaviorPanel, 3);
+            Grid.SetRow(behaviorPanel, 4);
             Grid.SetColumn(behaviorPanel, 1);
             contentGrid.Children.Add(behaviorPanel);
 
@@ -217,7 +275,7 @@ namespace CalculatorInAir
                 Margin = new Thickness(0, 0, 20, 0)
             };
 
-            var saveButton = new Button
+            _saveButton = new Button
             {
                 Content = Loc.Get("Save"),
                 Width = 90,
@@ -229,24 +287,30 @@ namespace CalculatorInAir
                 Cursor = Cursors.Hand,
                 FontWeight = FontWeights.Bold
             };
-            saveButton.Click += (s, e) => SaveSettings();
-            SetupButtonHover(saveButton, Color.FromRgb(139, 92, 246), Color.FromRgb(124, 76, 237));
-            actionsPanel.Children.Add(saveButton);
+            _saveButton.Click += (s, e) => SaveSettings();
+            SetupButtonHover(_saveButton, isDark => Color.FromRgb(139, 92, 246), isDark => Color.FromRgb(124, 76, 237));
+            actionsPanel.Children.Add(_saveButton);
 
-            var cancelButton = new Button
+            _cancelButton = new Button
             {
                 Content = Loc.Get("Cancel"),
                 Width = 90,
                 Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(40, 40, 48)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(60, 60, 72)),
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240)),
+                Foreground = _isDarkTheme ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210)),
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand
             };
-            cancelButton.Click += (s, e) => Close();
-            SetupButtonHover(cancelButton, Color.FromRgb(40, 40, 48), Color.FromRgb(55, 55, 68));
-            actionsPanel.Children.Add(cancelButton);
+            _cancelButton.Click += (s, e) => 
+            {
+                // Revert theme preview
+                _settings.Theme = _originalThemeSetting;
+                (System.Windows.Application.Current as App)?.ApplyTheme();
+                Close();
+            };
+            SetupButtonHover(_cancelButton, isDark => isDark ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240), isDark => isDark ? Color.FromRgb(55, 55, 68) : Color.FromRgb(220, 220, 230));
+            actionsPanel.Children.Add(_cancelButton);
 
             Grid.SetRow(actionsPanel, 2);
             mainGrid.Children.Add(actionsPanel);
@@ -259,21 +323,23 @@ namespace CalculatorInAir
 
         private TextBlock CreateLabel(string text)
         {
-            return new TextBlock
+            var lbl = new TextBlock
             {
                 Text = text,
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 185)),
+                Foreground = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(170, 170, 185) : Color.FromRgb(80, 80, 95)),
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 13,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 10, 0)
             };
+            _labels.Add(lbl);
+            return lbl;
         }
 
-        private void SetupButtonHover(Button btn, Color normalColor, Color hoverColor)
+        private void SetupButtonHover(Button btn, Func<bool, Color> getNormalColor, Func<bool, Color> getHoverColor)
         {
-            btn.MouseEnter += (s, e) => btn.Background = new SolidColorBrush(hoverColor);
-            btn.MouseLeave += (s, e) => btn.Background = new SolidColorBrush(normalColor);
+            btn.MouseEnter += (s, e) => btn.Background = new SolidColorBrush(getHoverColor(_isDarkTheme));
+            btn.MouseLeave += (s, e) => btn.Background = new SolidColorBrush(getNormalColor(_isDarkTheme));
         }
 
         private void StartRecording()
@@ -351,7 +417,7 @@ namespace CalculatorInAir
         private void UpdateRecordButtonText()
         {
             _recordButton.Content = _recordedDisplay;
-            _recordButton.Background = new SolidColorBrush(Color.FromRgb(40, 40, 48));
+            _recordButton.Background = new SolidColorBrush(_isDarkTheme ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240));
         }
 
         private string GetKeyFriendlyName(Key key)
@@ -395,17 +461,133 @@ namespace CalculatorInAir
             else
                 _settings.LanguagePreference = "Auto";
 
-            // 4. Update behavior checkboxes
+            // 4. Update Theme Setting
+            string selectedTheme = "Auto";
+            if (_themeComboBox.SelectedIndex == 1)
+                selectedTheme = "Dark";
+            else if (_themeComboBox.SelectedIndex == 2)
+                selectedTheme = "Light";
+            _settings.Theme = selectedTheme;
+
+            // 5. Update behavior checkboxes
             _settings.HideOnBlur = _hideOnBlurCheckBox.IsChecked ?? true;
             _settings.CopyOnEnter = _copyOnEnterCheckBox.IsChecked ?? true;
 
             // Save settings via manager
             SettingsManager.Save(_settings);
 
+            _isSaved = true;
+
             // Execute callback to reload settings and re-register hotkeys in the app
             _onSaveCallback?.Invoke();
 
             Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            if (!_isSaved)
+            {
+                // Revert theme preview
+                _settings.Theme = _originalThemeSetting;
+                (System.Windows.Application.Current as App)?.ApplyTheme();
+            }
+            base.OnClosed(e);
+        }
+
+        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isInitializing) return;
+
+            string selectedTheme = "Auto";
+            if (_themeComboBox.SelectedIndex == 1)
+                selectedTheme = "Dark";
+            else if (_themeComboBox.SelectedIndex == 2)
+                selectedTheme = "Light";
+
+            _settings.Theme = selectedTheme;
+            (System.Windows.Application.Current as App)?.ApplyTheme();
+        }
+
+        public void ApplyTheme(bool isDark)
+        {
+            _isDarkTheme = isDark;
+
+            // Background & foreground
+            Background = new SolidColorBrush(isDark ? Color.FromRgb(24, 24, 28) : Color.FromRgb(245, 245, 247));
+            Foreground = isDark ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
+
+            // Header Title
+            if (_headerTitle != null)
+            {
+                _headerTitle.Foreground = isDark 
+                    ? new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 0)
+                    : new LinearGradientBrush(Color.FromRgb(124, 58, 237), Color.FromRgb(13, 148, 136), 0);
+            }
+
+            // Labels
+            foreach (var lbl in _labels)
+            {
+                lbl.Foreground = new SolidColorBrush(isDark ? Color.FromRgb(170, 170, 185) : Color.FromRgb(80, 80, 95));
+            }
+
+            // Checkboxes
+            if (_hideOnBlurCheckBox != null)
+                _hideOnBlurCheckBox.Foreground = isDark ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
+            if (_copyOnEnterCheckBox != null)
+                _copyOnEnterCheckBox.Foreground = isDark ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
+
+            // ComboBoxes
+            var comboBg = new SolidColorBrush(isDark ? Color.FromRgb(40, 40, 48) : Color.FromRgb(255, 255, 255));
+            var comboFg = isDark ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
+            var comboBorder = new SolidColorBrush(isDark ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210));
+
+            if (_precisionComboBox != null)
+            {
+                _precisionComboBox.Background = comboBg;
+                _precisionComboBox.Foreground = comboFg;
+                _precisionComboBox.BorderBrush = comboBorder;
+            }
+            if (_languageComboBox != null)
+            {
+                _languageComboBox.Background = comboBg;
+                _languageComboBox.Foreground = comboFg;
+                _languageComboBox.BorderBrush = comboBorder;
+            }
+            if (_themeComboBox != null)
+            {
+                _themeComboBox.Background = comboBg;
+                _themeComboBox.Foreground = comboFg;
+                _themeComboBox.BorderBrush = comboBorder;
+            }
+
+            // Buttons
+            var btnBg = new SolidColorBrush(isDark ? Color.FromRgb(40, 40, 48) : Color.FromRgb(235, 235, 240));
+            var btnFg = isDark ? Brushes.White : new SolidColorBrush(Color.FromRgb(30, 30, 35));
+            var btnBorder = new SolidColorBrush(isDark ? Color.FromRgb(60, 60, 72) : Color.FromRgb(200, 200, 210));
+
+            if (_recordButton != null)
+            {
+                if (!_isRecording)
+                {
+                    _recordButton.Background = btnBg;
+                }
+                _recordButton.Foreground = btnFg;
+                _recordButton.BorderBrush = btnBorder;
+            }
+
+            if (_cancelButton != null)
+            {
+                _cancelButton.Background = btnBg;
+                _cancelButton.Foreground = btnFg;
+                _cancelButton.BorderBrush = btnBorder;
+            }
+
+            if (_saveButton != null)
+            {
+                _saveButton.Background = new SolidColorBrush(Color.FromRgb(139, 92, 246));
+                _saveButton.Foreground = Brushes.White;
+            }
         }
     }
 }

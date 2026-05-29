@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace CalculatorInAir
 {
@@ -25,6 +26,13 @@ namespace CalculatorInAir
 
             // 2. Initialize main search window
             _mainWindow = new MainWindow(_settings);
+            MainWindow = _mainWindow;
+
+            // Apply theme configuration
+            ApplyTheme();
+
+            // Register global user preference changes hook
+            SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
 
             // 3. Setup system tray integration
             SetupTrayIcon();
@@ -129,6 +137,7 @@ namespace CalculatorInAir
 
         private void ExitApp()
         {
+            SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             System.Windows.Application.Current.Shutdown();
@@ -136,6 +145,7 @@ namespace CalculatorInAir
 
         protected override void OnExit(ExitEventArgs e)
         {
+            SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
@@ -144,11 +154,73 @@ namespace CalculatorInAir
             base.OnExit(e);
         }
 
+        private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.General)
+            {
+                Dispatcher.BeginInvoke(new Action(() => ApplyTheme()));
+            }
+        }
+
+        public void ApplyTheme()
+        {
+            bool isDark = true;
+            if (_settings.Theme == "Light")
+            {
+                isDark = false;
+            }
+            else if (_settings.Theme == "Dark")
+            {
+                isDark = true;
+            }
+            else // "Auto"
+            {
+                isDark = ThemeDetector.IsSystemDarkTheme();
+            }
+
+            _mainWindow?.ApplyTheme(isDark);
+
+            foreach (Window window in Windows)
+            {
+                if (window is SettingsWindow settingsWindow)
+                {
+                    settingsWindow.ApplyTheme(isDark);
+                }
+            }
+        }
+
+        public static class ThemeDetector
+        {
+            public static bool IsSystemDarkTheme()
+            {
+                try
+                {
+                    using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                    {
+                        if (key != null)
+                        {
+                            var value = key.GetValue("AppsUseLightTheme");
+                            if (value is int i)
+                            {
+                                return i == 0;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fallback to dark theme on read error
+                }
+                return true;
+            }
+        }
+
         // Helper trigger method called when MainWindow saves settings
         public void OnSettingsSaved()
         {
             UpdateTrayMenuTexts();
             _notifyIcon.Icon = CreateDynamicIcon(); // Redraw icon in case we add customization hooks later
+            ApplyTheme(); // Ensure theme updates immediately if settings saved
         }
     }
 }

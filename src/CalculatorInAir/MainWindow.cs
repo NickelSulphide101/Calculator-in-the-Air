@@ -40,6 +40,10 @@ namespace CalculatorInAir
         private Border _resultBorder = null!;
         private TextBlock _resultTextBlock = null!;
         private TextBlock _hintTextBlock = null!;
+        private Path _calculatorIcon = null!;
+        private Border _separator = null!;
+        private TextBlock _equalsLabel = null!;
+        private DropShadowEffect _shadowEffect = null!;
 
         // Win32 Interop Variables
         private IntPtr _hwnd;
@@ -97,14 +101,14 @@ namespace CalculatorInAir
             _mainBorder.BorderBrush = borderGradient;
 
             // Setup modern soft drop shadow
-            var shadowEffect = new DropShadowEffect
+            _shadowEffect = new DropShadowEffect
             {
                 Color = Colors.Black,
                 BlurRadius = 25,
                 ShadowDepth = 0,
                 Opacity = 0.55
             };
-            _mainBorder.Effect = shadowEffect;
+            _mainBorder.Effect = _shadowEffect;
 
             // Allow moving window by dragging
             _mainBorder.MouseLeftButtonDown += (s, e) =>
@@ -130,7 +134,7 @@ namespace CalculatorInAir
             inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Textbox
 
             // Vector calculator icon on the left
-            var calculatorIcon = new Path
+            _calculatorIcon = new Path
             {
                 Data = Geometry.Parse("M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5zm3 4h2V7H7v2zm4 0h2V7h-2v2zm4 0h2V7h-2v2zm-8 4h2v-2H7v2zm4 0h2v-2h-2v2zm4 0h2v-2h-2v2zm-8 4h2v-2H7v2zm4 4h6v-2h-6v2z"),
                 Stretch = Stretch.Uniform,
@@ -142,9 +146,9 @@ namespace CalculatorInAir
             };
             // Violet to Cyan gradient fill for the icon
             var iconGradient = new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 45);
-            calculatorIcon.Fill = iconGradient;
-            inputGrid.Children.Add(calculatorIcon);
-            Grid.SetColumn(calculatorIcon, 0);
+            _calculatorIcon.Fill = iconGradient;
+            inputGrid.Children.Add(_calculatorIcon);
+            Grid.SetColumn(_calculatorIcon, 0);
 
             // Container for input box and placeholder overlapping
             var textBoxContainer = new Grid { Margin = new Thickness(5, 0, 20, 0) };
@@ -193,14 +197,14 @@ namespace CalculatorInAir
             resultPanelGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) }); // Content
 
             // Separator Line
-            var separator = new Border
+            _separator = new Border
             {
                 Height = 1,
                 Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
                 Margin = new Thickness(15, 0, 15, 0)
             };
-            Grid.SetRow(separator, 0);
-            resultPanelGrid.Children.Add(separator);
+            Grid.SetRow(_separator, 0);
+            resultPanelGrid.Children.Add(_separator);
 
             // Content Grid
             var resultContentGrid = new Grid { Height = 56 };
@@ -209,7 +213,7 @@ namespace CalculatorInAir
             resultContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // Hint text
 
             // Glowing Equals Glyphs
-            var equalsLabel = new TextBlock
+            _equalsLabel = new TextBlock
             {
                 Text = "=",
                 Foreground = new SolidColorBrush(Color.FromRgb(167, 139, 250)),
@@ -219,8 +223,8 @@ namespace CalculatorInAir
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(15, 0, 5, 0)
             };
-            Grid.SetColumn(equalsLabel, 0);
-            resultContentGrid.Children.Add(equalsLabel);
+            Grid.SetColumn(_equalsLabel, 0);
+            resultContentGrid.Children.Add(_equalsLabel);
 
             // Main Result display TextBlock (with gorgeous Gradient)
             _resultTextBlock = new TextBlock
@@ -554,6 +558,110 @@ namespace CalculatorInAir
             };
 
             settingsWindow.ShowDialog();
+        }
+
+        public void ApplyTheme(bool isDark)
+        {
+            if (isDark)
+            {
+                _mainBorder.Background = new SolidColorBrush(Color.FromArgb(242, 20, 20, 25));
+
+                var borderGradient = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 1)
+                };
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 167, 139, 250), 0.0)); // Violet
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 103, 232, 249), 0.5)); // Cyan
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(26, 255, 255, 255), 1.0));  // Subtle white
+                _mainBorder.BorderBrush = borderGradient;
+
+                if (_shadowEffect != null)
+                {
+                    _shadowEffect.Opacity = 0.55;
+                }
+
+                if (_calculatorIcon != null)
+                {
+                    _calculatorIcon.Fill = new LinearGradientBrush(Color.FromRgb(167, 139, 250), Color.FromRgb(103, 232, 249), 45);
+                }
+
+                _placeholderTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125));
+                _inputTextBox.Foreground = Brushes.White;
+                _inputTextBox.CaretBrush = new SolidColorBrush(Color.FromRgb(167, 139, 250));
+                _inputTextBox.SelectionBrush = new SolidColorBrush(Color.FromArgb(100, 139, 92, 246));
+
+                if (_separator != null)
+                {
+                    _separator.Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+                }
+
+                if (_equalsLabel != null)
+                {
+                    _equalsLabel.Foreground = new SolidColorBrush(Color.FromRgb(167, 139, 250));
+                }
+
+                var resultGradient = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 0)
+                };
+                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(167, 139, 250), 0.0)); // Violet
+                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(103, 232, 249), 1.0)); // Cyan
+                _resultTextBlock.Foreground = resultGradient;
+
+                _hintTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(110, 115, 125));
+            }
+            else
+            {
+                _mainBorder.Background = new SolidColorBrush(Color.FromArgb(242, 245, 245, 247));
+
+                var borderGradient = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 1)
+                };
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 139, 92, 246), 0.0)); // Violet
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(77, 6, 182, 212), 0.5));  // Cyan
+                borderGradient.GradientStops.Add(new GradientStop(Color.FromArgb(26, 0, 0, 0), 1.0));      // Subtle black
+                _mainBorder.BorderBrush = borderGradient;
+
+                if (_shadowEffect != null)
+                {
+                    _shadowEffect.Opacity = 0.15;
+                }
+
+                if (_calculatorIcon != null)
+                {
+                    _calculatorIcon.Fill = new LinearGradientBrush(Color.FromRgb(124, 58, 237), Color.FromRgb(13, 148, 136), 45);
+                }
+
+                _placeholderTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(120, 125, 135));
+                _inputTextBox.Foreground = new SolidColorBrush(Color.FromRgb(30, 30, 35));
+                _inputTextBox.CaretBrush = new SolidColorBrush(Color.FromRgb(124, 58, 237));
+                _inputTextBox.SelectionBrush = new SolidColorBrush(Color.FromArgb(50, 139, 92, 246));
+
+                if (_separator != null)
+                {
+                    _separator.Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0));
+                }
+
+                if (_equalsLabel != null)
+                {
+                    _equalsLabel.Foreground = new SolidColorBrush(Color.FromRgb(124, 58, 237));
+                }
+
+                var resultGradient = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 0)
+                };
+                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(124, 58, 237), 0.0)); // Violet
+                resultGradient.GradientStops.Add(new GradientStop(Color.FromRgb(13, 148, 136), 1.0)); // Cyan
+                _resultTextBlock.Foreground = resultGradient;
+
+                _hintTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(120, 125, 135));
+            }
         }
     }
 }

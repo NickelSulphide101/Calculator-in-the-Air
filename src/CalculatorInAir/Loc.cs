@@ -67,6 +67,14 @@ namespace CalculatorInAir
                     return isZh ? "界面语言：" : "Interface Language:";
                 case "LanguageAuto":
                     return isZh ? "跟随系统 (Auto)" : "Follow System (Auto)";
+                case "ThemeSetting":
+                    return isZh ? "界面主题：" : "Theme:";
+                case "ThemeAuto":
+                    return isZh ? "跟随系统 (Auto)" : "Follow System (Auto)";
+                case "ThemeDark":
+                    return isZh ? "暗黑模式" : "Dark Mode";
+                case "ThemeLight":
+                    return isZh ? "明亮模式" : "Light Mode";
                 case "Save":
                     return isZh ? "保存" : "Save";
                 case "Cancel":
