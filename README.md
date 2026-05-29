@@ -110,6 +110,12 @@ If you wish to build the executable from source code, make sure you have the [.N
 
 Open a command prompt (cmd/PowerShell) in the project directory and run one of the following commands:
 
+#### Running Unit Tests
+To execute mathematical parser and unit conversion tests:
+```bash
+dotnet test tests/CalculatorInAir.Tests/CalculatorInAir.Tests.csproj
+```
+
 #### Option A: Framework-Dependent Publish (Default, ~2.5MB)
 Requires the .NET 10.0 Desktop Runtime to be installed on target systems:
 ```bash
@@ -197,7 +203,7 @@ The output portable binary `CalculatorInAir.exe` will be located inside the `./p
 
 - **长度**：`m` (`meter`/`meters`/`米`), `cm` (`centimeter`/`centimeters`/`厘米`), `mm` (`millimeter`/`millimeters`/`毫米`), `km` (`kilometer`/`kilometers`/`千米`/`公里`), `in` (`inch`/`inches`/`英寸`), `ft` (`foot`/`feet`/`英尺`), `yd` (`yard`/`yards`/`码`), `mi` (`mile`/`miles`/`英里`)
 - **重量/质量**：`kg` (`kilogram`/`kilograms`/`千克`/`公斤`), `g` (`gram`/`grams`/`克`), `mg` (`milligram`/`milligrams`/`毫克`), `lb` (`lbs`/`pound`/`pounds`/`磅`), `oz` (`ounce`/`ounces`/`盎司`)
-- **temperature**: `c` (`celsius`/`摄氏度`), `f` (`fahrenheit`/`华氏度`), `k` (`kelvin`/`开尔文`)
+- **温度**：`c` (`celsius`/`摄氏度`), `f` (`fahrenheit`/`华氏度`), `k` (`kelvin`/`开尔文`)
 
 ##### 示例
 - `2pi * 5` $\rightarrow$ `31.4159265359`
@@ -228,11 +234,17 @@ The output portable binary `CalculatorInAir.exe` will be located inside the `./p
 
 如果您想将所有设置重置为默认值，只需退出程序，删除该文件，然后重新运行即可。
 
-### 本地编译
+### 本地编译与测试
 
-如果您希望从源码编译该可执行文件，请确保系统已安装 [.NET 10.0 SDK](https://dotnet.microsoft.com/download)。
+如果您希望从源码编译或测试该可执行文件，请确保系统已安装 [.NET 10.0 SDK](https://dotnet.microsoft.com/download)。
 
 在项目根目录下打开命令行（cmd/PowerShell）并运行以下命令之一：
+
+#### 运行测试
+若要运行解析器和单位换算的单元测试：
+```bash
+dotnet test tests/CalculatorInAir.Tests/CalculatorInAir.Tests.csproj
+```
 
 #### 方式 A：框架依赖发布（默认，生成体积约 2.5MB）
 需要在目标机器上安装有 .NET 10.0 桌面运行时：
