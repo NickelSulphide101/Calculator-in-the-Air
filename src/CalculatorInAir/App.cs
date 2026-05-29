@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -95,8 +96,12 @@ namespace CalculatorInAir
             _showMenuItem.Text = $"{Loc.Get("TrayShow")} ({_settings.HotkeyDisplay})";
             _settingsMenuItem.Text = Loc.Get("TraySettings");
             _exitMenuItem.Text = Loc.Get("TrayExit");
-            _notifyIcon.Text = Loc.Get("SettingsTitle").Split(" - ")[0]; // "Calculator in the Air" in localized form if desired, or keep default
+            var titleParts = Loc.Get("SettingsTitle").Split(" - ");
+            _notifyIcon.Text = titleParts.Length > 1 ? titleParts[^1] : titleParts[0];
         }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool DestroyIcon(IntPtr handle);
 
         private Icon CreateDynamicIcon()
         {
@@ -142,8 +147,15 @@ namespace CalculatorInAir
 
                 // Retrieve handle to icon and copy it to a managed Icon object
                 IntPtr hIcon = bmp.GetHicon();
-                var icon = Icon.FromHandle(hIcon);
-                return (Icon)icon.Clone(); // Clone guarantees we own the resource
+                try
+                {
+                    using var icon = Icon.FromHandle(hIcon);
+                    return (Icon)icon.Clone(); // Clone guarantees we own the resource
+                }
+                finally
+                {
+                    DestroyIcon(hIcon); // Free the native GDI icon handle
+                }
             }
         }
 

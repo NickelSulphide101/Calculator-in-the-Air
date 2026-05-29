@@ -108,6 +108,7 @@ namespace CalculatorInAir.Tests
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("2 + (3"));
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("unknown_func(2)"));
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("10 m to kg")); // mismatched categories
+            Assert.Throws<ArgumentException>(() => MathParser.Evaluate("sin(")); // incomplete function call
         }
     }
 }

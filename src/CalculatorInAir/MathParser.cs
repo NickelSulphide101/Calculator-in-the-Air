@@ -471,6 +471,10 @@ namespace CalculatorInAir
                 {
                     index++; // consume '('
                     var args = new List<double>();
+                    if (index >= tokens.Count)
+                    {
+                        throw new ArgumentException($"Mismatched parenthesis in function '{name}'");
+                    }
                     if (tokens[index].Type != TokenType.RParen)
                     {
                         args.Add(ParseExpression(tokens, ref index));

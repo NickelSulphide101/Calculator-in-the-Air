@@ -168,9 +168,9 @@ namespace CalculatorInAir
             {
                 Color = Colors.Black,
                 BlurRadius = 25,
-                ShadowDepth = 0
+                ShadowDepth = 0,
+                Opacity = 0.55 // Default dark theme value; updated dynamically by ApplyTheme
             };
-            _shadowEffect.SetValue(DropShadowEffect.OpacityProperty, new DynamicResourceExtension("ShadowOpacity"));
             _mainBorder.Effect = _shadowEffect;
 
             // Allow moving window by dragging
@@ -420,18 +420,20 @@ namespace CalculatorInAir
 
         public void ShowWindow()
         {
-            UpdatePositionToActiveMonitor();
+            // Pre-set invisible state to prevent visual flash before positioning
+            this.Opacity = 0;
+            _translateTransform.Y = -15;
 
             this.Show();
             this.Activate();
+
+            // Position after Show() so PresentationSource is available for accurate DPI scaling
+            UpdatePositionToActiveMonitor();
 
             _inputTextBox.Focus();
             _inputTextBox.SelectAll();
 
             // Slide and fade-in animation
-            this.Opacity = 0;
-            _translateTransform.Y = -15;
-
             var fadeIn = new DoubleAnimation
             {
                 From = 0,
@@ -732,8 +734,13 @@ namespace CalculatorInAir
 
         public void ApplyTheme(bool isDark)
         {
-            // Styling is managed dynamically via XAML ResourceDictionaries!
-            // WPF automatic DynamicResource lookup triggers updates instantly.
+            // Most styling is managed dynamically via XAML ResourceDictionaries.
+            // DropShadowEffect is not a FrameworkElement so DynamicResource binding
+            // does not work — manually apply the shadow opacity from theme resources.
+            if (System.Windows.Application.Current?.Resources["ShadowOpacity"] is double shadowOpacity)
+            {
+                _shadowEffect.Opacity = shadowOpacity;
+            }
         }
     }
 }
