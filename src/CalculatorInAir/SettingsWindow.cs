@@ -418,11 +418,11 @@ namespace CalculatorInAir
             // Validate that hotkey contains at least one modifier key
             if (!_recordedCtrl && !_recordedAlt && !_recordedShift && !_recordedWin)
             {
-                MessageBox.Show(
+                System.Windows.MessageBox.Show(
                     Loc.Get("HotkeyWarningText"),
                     Loc.Get("HotkeyWarningTitle"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning
                 );
                 return;
             }

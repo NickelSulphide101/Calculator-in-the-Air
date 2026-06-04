@@ -92,6 +92,8 @@ namespace CalculatorInAir
 
         private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
         private const int DWMSBT_TRANSLUCENTAUTHORITATIVE = 3; // Acrylic
+        private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+        private const int DWMWCP_ROUND = 2; // 启用圆角
 
         private static bool IsWindows11OrGreater()
         {
