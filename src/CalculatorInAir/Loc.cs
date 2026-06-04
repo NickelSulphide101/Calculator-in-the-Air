@@ -137,6 +137,10 @@ namespace CalculatorInAir
                     return isZh ? "无法注册全局快捷键 '{0}'。它可能已被其他程序占用。" : "Failed to register global hotkey '{0}'. It might be already in use by another application.";
                 case "HotkeyConflictTitle":
                     return isZh ? "快捷键冲突" : "Hotkey Conflict";
+                case "HotkeyWarningText":
+                    return isZh ? "快捷键必须包含至少一个修饰键（如 Ctrl, Alt, Shift 或 Win），以防止您的键盘按键被全局锁定！" : "The shortcut must contain at least one modifier key (Ctrl, Alt, Shift, or Win) to prevent your keyboard keys from being locked globally!";
+                case "HotkeyWarningTitle":
+                    return isZh ? "不安全的快捷键" : "Unsafe Shortcut";
                 default:
                     return key;
             }

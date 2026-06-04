@@ -26,4 +26,6 @@
     <sys:String x:Key="Cancel">Cancel</sys:String>
     <sys:String x:Key="HotkeyConflict">Failed to register global hotkey '{0}'. It might be already in use by another application.</sys:String>
     <sys:String x:Key="HotkeyConflictTitle">Hotkey Conflict</sys:String>
+    <sys:String x:Key="HotkeyWarningText">The shortcut must contain at least one modifier key (Ctrl, Alt, Shift, or Win) to prevent your keyboard keys from being locked globally!</sys:String>
+    <sys:String x:Key="HotkeyWarningTitle">Unsafe Shortcut</sys:String>
 </ResourceDictionary>

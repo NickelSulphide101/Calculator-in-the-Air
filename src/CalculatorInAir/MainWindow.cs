@@ -29,8 +29,9 @@ namespace CalculatorInAir
         private const int WM_HOTKEY = 0x0312;
         private const int WM_USER_WAKEUP = 0x0400 + 101;
 
-        private const double HeightCollapsed = 109;
-        private const double HeightExpanded = 166;
+        private readonly double _heightCollapsed;
+        private readonly double _heightExpanded;
+        private readonly double _windowWidth;
 
         // Settings & State
         private readonly AppSettings _settings;
@@ -117,6 +118,10 @@ namespace CalculatorInAir
                 AllowsTransparency = false;
                 WindowStyle = WindowStyle.None;
 
+                _heightCollapsed = 59;
+                _heightExpanded = 116;
+                _windowWidth = 550;
+
                 // Setup WindowChrome to remove client borders while allows transparency is false
                 var chrome = new System.Windows.Shell.WindowChrome
                 {
@@ -131,6 +136,10 @@ namespace CalculatorInAir
             {
                 AllowsTransparency = true;
                 WindowStyle = WindowStyle.None;
+
+                _heightCollapsed = 109;
+                _heightExpanded = 166;
+                _windowWidth = 600;
             }
 
             InitializeUI();
@@ -144,8 +153,8 @@ namespace CalculatorInAir
             ResizeMode = ResizeMode.NoResize;
             ShowInTaskbar = false;
             Topmost = true;
-            Width = 600;
-            Height = HeightCollapsed;
+            Width = _windowWidth;
+            Height = _heightCollapsed;
             Title = "Calculator in the Air";
             SizeToContent = SizeToContent.Manual;
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -154,24 +163,27 @@ namespace CalculatorInAir
             // 1. Root Container Border
             _mainBorder = new Border
             {
-                CornerRadius = new CornerRadius(16),
+                CornerRadius = _isWin11OrGreater ? new CornerRadius(12) : new CornerRadius(16),
                 BorderThickness = new Thickness(1.5),
-                Margin = new Thickness(25) // Leave space for the drop shadow
+                Margin = _isWin11OrGreater ? new Thickness(0) : new Thickness(25) // Leave space for the drop shadow
             };
 
             // Set resource references for dynamic styling (XAML-separated)
             _mainBorder.SetResourceReference(Border.BackgroundProperty, "WindowBackgroundBrush");
             _mainBorder.SetResourceReference(Border.BorderBrushProperty, "WindowBorderBrush");
 
-            // Setup modern soft drop shadow
-            _shadowEffect = new DropShadowEffect
+            if (!_isWin11OrGreater)
             {
-                Color = Colors.Black,
-                BlurRadius = 25,
-                ShadowDepth = 0,
-                Opacity = 0.55 // Default dark theme value; updated dynamically by ApplyTheme
-            };
-            _mainBorder.Effect = _shadowEffect;
+                // Setup modern soft drop shadow
+                _shadowEffect = new DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 25,
+                    ShadowDepth = 0,
+                    Opacity = 0.55 // Default dark theme value; updated dynamically by ApplyTheme
+                };
+                _mainBorder.Effect = _shadowEffect;
+            }
 
             // Allow moving window by dragging
             _mainBorder.MouseLeftButtonDown += (s, e) =>
@@ -352,6 +364,9 @@ namespace CalculatorInAir
             {
                 int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
                 DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+
+                int cornerPreference = DWMWCP_ROUND;
+                DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
             }
         }
 
@@ -430,6 +445,8 @@ namespace CalculatorInAir
             // Position after Show() so PresentationSource is available for accurate DPI scaling
             UpdatePositionToActiveMonitor();
 
+            _historyIndex = _history.Count; // Reset navigation index to the end
+
             _inputTextBox.Focus();
             _inputTextBox.SelectAll();
 
@@ -478,7 +495,7 @@ namespace CalculatorInAir
             {
                 this.Hide();
                 // Reset to collapsed height for next show
-                Height = HeightCollapsed;
+                Height = _heightCollapsed;
                 HideResultBorder();
             };
 
@@ -559,7 +576,7 @@ namespace CalculatorInAir
             var heightAnimation = new DoubleAnimation
             {
                 From = Height,
-                To = HeightExpanded,
+                To = _heightExpanded,
                 Duration = TimeSpan.FromMilliseconds(180),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
@@ -587,7 +604,7 @@ namespace CalculatorInAir
             var heightAnimation = new DoubleAnimation
             {
                 From = Height,
-                To = HeightCollapsed,
+                To = _heightCollapsed,
                 Duration = TimeSpan.FromMilliseconds(150),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
             };
@@ -651,6 +668,12 @@ namespace CalculatorInAir
             }
             else if (e.Key == Key.Down)
             {
+                if (_history.Count == 0)
+                {
+                    e.Handled = true;
+                    return;
+                }
+
                 if (_historyIndex < _history.Count)
                 {
                     _historyIndex++;
@@ -737,7 +760,7 @@ namespace CalculatorInAir
             // Most styling is managed dynamically via XAML ResourceDictionaries.
             // DropShadowEffect is not a FrameworkElement so DynamicResource binding
             // does not work — manually apply the shadow opacity from theme resources.
-            if (System.Windows.Application.Current?.Resources["ShadowOpacity"] is double shadowOpacity)
+            if (_shadowEffect != null && System.Windows.Application.Current?.Resources["ShadowOpacity"] is double shadowOpacity)
             {
                 _shadowEffect.Opacity = shadowOpacity;
             }

@@ -72,6 +72,10 @@ namespace CalculatorInAir
                         LastResult = convertedVal;
                         return convertedVal;
                     }
+                    else
+                    {
+                        throw new ArgumentException($"Unsupported or mismatched unit conversion from '{sourceUnit}' to '{targetUnit}'");
+                    }
                 }
             }
 
@@ -212,12 +216,24 @@ namespace CalculatorInAir
             { "c", new UnitInfo(UnitCategory.Temperature, 0) },
             { "celsius", new UnitInfo(UnitCategory.Temperature, 0) },
             { "摄氏度", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "°c", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "ºc", new UnitInfo(UnitCategory.Temperature, 0) },
             { "f", new UnitInfo(UnitCategory.Temperature, 0) },
             { "fahrenheit", new UnitInfo(UnitCategory.Temperature, 0) },
             { "华氏度", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "°f", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "ºf", new UnitInfo(UnitCategory.Temperature, 0) },
             { "k", new UnitInfo(UnitCategory.Temperature, 0) },
             { "kelvin", new UnitInfo(UnitCategory.Temperature, 0) },
-            { "开尔文", new UnitInfo(UnitCategory.Temperature, 0) }
+            { "开尔文", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "°k", new UnitInfo(UnitCategory.Temperature, 0) },
+            { "ºk", new UnitInfo(UnitCategory.Temperature, 0) }
+        };
+
+        private static readonly HashSet<string> Functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "sin", "cos", "tan", "asin", "arcsin", "acos", "arccos", "atan", "arctan",
+            "sqrt", "cbrt", "log", "ln", "abs", "exp", "round", "floor", "ceil"
         };
 
         private static bool Convert(double val, string from, string to, out double result)
@@ -236,29 +252,29 @@ namespace CalculatorInAir
             {
                 double celsius = 0;
                 string fLower = from.ToLowerInvariant();
-                if (fLower == "c" || fLower == "celsius" || fLower == "摄氏度")
+                if (fLower == "c" || fLower == "celsius" || fLower == "摄氏度" || fLower == "°c" || fLower == "ºc")
                 {
                     celsius = val;
                 }
-                else if (fLower == "f" || fLower == "fahrenheit" || fLower == "华氏度")
+                else if (fLower == "f" || fLower == "fahrenheit" || fLower == "华氏度" || fLower == "°f" || fLower == "ºf")
                 {
                     celsius = (val - 32) / 1.8;
                 }
-                else if (fLower == "k" || fLower == "kelvin" || fLower == "开尔文")
+                else if (fLower == "k" || fLower == "kelvin" || fLower == "开尔文" || fLower == "°k" || fLower == "ºk")
                 {
                     celsius = val - 273.15;
                 }
 
                 string tLower = to.ToLowerInvariant();
-                if (tLower == "c" || tLower == "celsius" || tLower == "摄氏度")
+                if (tLower == "c" || tLower == "celsius" || tLower == "摄氏度" || tLower == "°c" || tLower == "ºc")
                 {
                     result = celsius;
                 }
-                else if (tLower == "f" || tLower == "fahrenheit" || tLower == "华氏度")
+                else if (tLower == "f" || tLower == "fahrenheit" || tLower == "华氏度" || tLower == "°f" || tLower == "ºf")
                 {
                     result = celsius * 1.8 + 32;
                 }
-                else if (tLower == "k" || tLower == "kelvin" || tLower == "开尔文")
+                else if (tLower == "k" || tLower == "kelvin" || tLower == "开尔文" || tLower == "°k" || tLower == "ºk")
                 {
                     result = celsius + 273.15;
                 }
@@ -289,7 +305,19 @@ namespace CalculatorInAir
                 bool ShouldImplicitMultiply(TokenType nextType)
                 {
                     if (tokens.Count == 0) return false;
-                    var lastType = tokens[tokens.Count - 1].Type;
+                    var lastToken = tokens[tokens.Count - 1];
+                    var lastType = lastToken.Type;
+                    
+                    // If the last token is an identifier and matches a known function name,
+                    // and the next token is '(', do NOT implicitly multiply (e.g. sin(30) -> sin(30), not sin*(30))
+                    if (lastType == TokenType.Identifier && nextType == TokenType.LParen)
+                    {
+                        if (Functions.Contains(lastToken.Value))
+                        {
+                            return false;
+                        }
+                    }
+
                     bool lastIsPrimary = lastType == TokenType.Number || lastType == TokenType.Identifier || lastType == TokenType.RParen;
                     bool nextIsPrimary = nextType == TokenType.Number || nextType == TokenType.Identifier || nextType == TokenType.LParen;
                     return lastIsPrimary && nextIsPrimary;
@@ -399,12 +427,12 @@ namespace CalculatorInAir
 
         private static double ParseTerm(List<Token> tokens, ref int index)
         {
-            double result = ParseFactor(tokens, ref index);
+            double result = ParseUnary(tokens, ref index);
             while (index < tokens.Count && (tokens[index].Type == TokenType.Multiply || tokens[index].Type == TokenType.Divide || tokens[index].Type == TokenType.Modulo))
             {
                 var op = tokens[index].Type;
                 index++;
-                double right = ParseFactor(tokens, ref index);
+                double right = ParseUnary(tokens, ref index);
                 if (op == TokenType.Multiply)
                 {
                     result *= right;
@@ -425,11 +453,11 @@ namespace CalculatorInAir
 
         private static double ParseFactor(List<Token> tokens, ref int index)
         {
-            double result = ParseUnary(tokens, ref index);
+            double result = ParsePrimary(tokens, ref index);
             if (index < tokens.Count && tokens[index].Type == TokenType.Power)
             {
                 index++;
-                double right = ParseFactor(tokens, ref index);
+                double right = ParseUnary(tokens, ref index);
                 result = Math.Pow(result, right);
             }
             return result;
@@ -444,7 +472,7 @@ namespace CalculatorInAir
                 double val = ParseUnary(tokens, ref index);
                 return op == TokenType.Plus ? val : -val;
             }
-            return ParsePrimary(tokens, ref index);
+            return ParseFactor(tokens, ref index);
         }
 
         private static double ParsePrimary(List<Token> tokens, ref int index)
@@ -581,7 +609,13 @@ namespace CalculatorInAir
                     return Math.Exp(args[0]);
                 case "round":
                     if (count == 1) return Math.Round(args[0]);
-                    if (count == 2) return Math.Round(args[0], (int)args[1]);
+                    if (count == 2)
+                    {
+                        int digits = (int)args[1];
+                        if (digits < 0 || digits > 15)
+                            throw new ArgumentException("Rounding decimals must be between 0 and 15");
+                        return Math.Round(args[0], digits);
+                    }
                     throw new ArgumentException("round expects 1 or 2 arguments");
                 case "floor":
                     if (count != 1) throw new ArgumentException("floor expects 1 argument");

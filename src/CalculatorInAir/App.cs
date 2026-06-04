@@ -175,6 +175,9 @@ namespace CalculatorInAir
         {
             SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
             _notifyIcon.Visible = false;
+            var currentIcon = _notifyIcon.Icon;
+            _notifyIcon.Icon = null;
+            currentIcon?.Dispose();
             _notifyIcon.Dispose();
             System.Windows.Application.Current.Shutdown();
         }
@@ -185,6 +188,9 @@ namespace CalculatorInAir
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
+                var currentIcon = _notifyIcon.Icon;
+                _notifyIcon.Icon = null;
+                currentIcon?.Dispose();
                 _notifyIcon.Dispose();
             }
             base.OnExit(e);
@@ -288,7 +294,9 @@ namespace CalculatorInAir
         {
             Loc.LoadLanguage(Loc.CurrentLanguage);
             UpdateTrayMenuTexts();
+            var oldIcon = _notifyIcon.Icon;
             _notifyIcon.Icon = CreateDynamicIcon(); // Redraw icon in case we add customization hooks later
+            oldIcon?.Dispose();
             ApplyTheme(); // Ensure theme updates immediately if settings saved
         }
     }

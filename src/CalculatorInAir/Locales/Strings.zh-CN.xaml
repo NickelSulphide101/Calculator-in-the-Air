@@ -26,4 +26,6 @@
     <sys:String x:Key="Cancel">取消</sys:String>
     <sys:String x:Key="HotkeyConflict">无法注册全局快捷键 '{0}'。它可能已被其他程序占用。</sys:String>
     <sys:String x:Key="HotkeyConflictTitle">快捷键冲突</sys:String>
+    <sys:String x:Key="HotkeyWarningText">快捷键必须包含至少一个修饰键（如 Ctrl, Alt, Shift 或 Win），以防止您的键盘按键被全局锁定！</sys:String>
+    <sys:String x:Key="HotkeyWarningTitle">不安全的快捷键</sys:String>
 </ResourceDictionary>

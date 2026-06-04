@@ -84,6 +84,10 @@ namespace CalculatorInAir.Tests
         [InlineData("0 C to K", 273.15)]
         [InlineData("32 F to C", 0.0)]
         [InlineData("212 F to C", 100.0)]
+        [InlineData("0 °C to °F", 32.0)]
+        [InlineData("100 °C to °F", 212.0)]
+        [InlineData("0 ºC to ºF", 32.0)]
+        [InlineData("32 °F to °C", 0.0)]
         public void Evaluate_UnitConversions_ShouldConvertCorrectly(string expr, double expected)
         {
             double result = MathParser.Evaluate(expr);
@@ -109,6 +113,34 @@ namespace CalculatorInAir.Tests
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("unknown_func(2)"));
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("10 m to kg")); // mismatched categories
             Assert.Throws<ArgumentException>(() => MathParser.Evaluate("sin(")); // incomplete function call
+        }
+
+        [Theory]
+        [InlineData("-2^2", -4.0)]
+        [InlineData("2^-2", 0.25)]
+        [InlineData("-2^-2", -0.25)]
+        [InlineData("2^3^2", 512.0)]
+        [InlineData("2^-3^2", 0.001953125)]
+        public void Evaluate_PowerPrecedenceAndUnary_ShouldCalculateCorrectly(string expr, double expected)
+        {
+            double result = MathParser.Evaluate(expr);
+            Assert.Equal(expected, result, 9);
+        }
+
+        [Fact]
+        public void Evaluate_MismatchedUnitConversions_ShouldThrowFriendlyException()
+        {
+            var ex = Assert.Throws<ArgumentException>(() => MathParser.Evaluate("10 m to kg"));
+            Assert.Contains("Unsupported or mismatched unit conversion from 'm' to 'kg'", ex.Message);
+        }
+
+        [Theory]
+        [InlineData("round(1.23, -1)")]
+        [InlineData("round(1.23, 100)")]
+        public void Evaluate_RoundDigitsValidation_ShouldThrowException(string expr)
+        {
+            var ex = Assert.Throws<ArgumentException>(() => MathParser.Evaluate(expr));
+            Assert.Contains("Rounding decimals must be between 0 and 15", ex.Message);
         }
     }
 }

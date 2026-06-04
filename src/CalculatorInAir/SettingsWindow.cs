@@ -415,6 +415,18 @@ namespace CalculatorInAir
         {
             if (_isRecording) return; // Wait until recording stops
 
+            // Validate that hotkey contains at least one modifier key
+            if (!_recordedCtrl && !_recordedAlt && !_recordedShift && !_recordedWin)
+            {
+                MessageBox.Show(
+                    Loc.Get("HotkeyWarningText"),
+                    Loc.Get("HotkeyWarningTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+                return;
+            }
+
             // 1. Update hotkey config
             _settings.Ctrl = _recordedCtrl;
             _settings.Alt = _recordedAlt;
