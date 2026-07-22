@@ -721,6 +721,10 @@ namespace CalculatorInAir
             if (_history.Count == 0 || _history[_history.Count - 1] != expr)
             {
                 _history.Add(expr);
+                if (_history.Count > 100)
+                {
+                    _history.RemoveAt(0);
+                }
             }
             _historyIndex = _history.Count;
         }

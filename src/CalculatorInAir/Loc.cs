@@ -88,7 +88,7 @@ namespace CalculatorInAir
             switch (key)
             {
                 case "Placeholder":
-                    return isZh ? "输入数学公式... (例如: 2pi * 5 或 sqrt(16))" : "Type a math formula... (e.g. 2pi * 5 or sqrt(16))";
+                    return isZh ? "输入数学公式... (例如: 2 + 3 * 4 或 (5 + 6) ^ 2)" : "Type a math formula... (e.g. 2 + 3 * 4 or (5 + 6) ^ 2)";
                 case "PressEnterToCopy":
                     return isZh ? "按回车复制" : "Press Enter to copy";
                 case "Copied":
