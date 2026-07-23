@@ -99,6 +99,12 @@ namespace CalculatorInAir
         {
             try
             {
+                var sysVersion = Environment.OSVersion.Version;
+                if (sysVersion.Major > 10 || (sysVersion.Major == 10 && sysVersion.Build >= 22000))
+                {
+                    return true;
+                }
+
                 var os = new OSVERSIONINFOEX();
                 os.dwOSVersionInfoSize = Marshal.SizeOf(os);
                 if (RtlGetVersion(ref os) == 0)
@@ -336,7 +342,11 @@ namespace CalculatorInAir
                 // Win32 Interop Setup
                 var helper = new WindowInteropHelper(this);
                 _hwnd = helper.Handle;
-                _hwndSource = HwndSource.FromHwnd(_hwnd);
+                _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+                if (_hwndSource == null && _hwnd != IntPtr.Zero)
+                {
+                    _hwndSource = HwndSource.FromHwnd(_hwnd);
+                }
                 _hwndSource?.AddHook(HwndHook);
 
                 RegisterHotkey();
