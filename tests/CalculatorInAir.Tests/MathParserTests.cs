@@ -10,6 +10,9 @@ namespace CalculatorInAir.Tests
         [InlineData("2 + 3 * 4", 14.0)]
         [InlineData("(2 + 3) * 4", 20.0)]
         [InlineData("10 - 5 - 2", 3.0)]
+        [InlineData("5 × 6", 30.0)]
+        [InlineData("10 ÷ 2", 5.0)]
+        [InlineData("5 − 3", 2.0)]
         [InlineData("2^3^2", 512.0)] // right-associative power: 2^(3^2) = 512
         [InlineData("10 % 3", 1.0)]
         [InlineData("-5 + +3", -2.0)]

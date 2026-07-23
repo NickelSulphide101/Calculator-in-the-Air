@@ -632,11 +632,18 @@ namespace CalculatorInAir
 
                         if (_settings.CopyOnEnter)
                         {
-                            try
+                            for (int attempt = 0; attempt < 5; attempt++)
                             {
-                                Clipboard.SetText(formatted);
+                                try
+                                {
+                                    Clipboard.SetText(formatted);
+                                    break;
+                                }
+                                catch
+                                {
+                                    System.Threading.Thread.Sleep(10);
+                                }
                             }
-                            catch { }
                         }
 
                         AddToHistory(_inputTextBox.Text); // save the full text typed

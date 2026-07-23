@@ -148,9 +148,13 @@ namespace CalculatorInAir
                     switch (c)
                     {
                         case '+': type = TokenType.Plus; break;
-                        case '-': type = TokenType.Minus; break;
-                        case '*': type = TokenType.Multiply; break;
-                        case '/': type = TokenType.Divide; break;
+                        case '-':
+                        case '−': type = TokenType.Minus; break;
+                        case '*':
+                        case '×':
+                        case '✕': type = TokenType.Multiply; break;
+                        case '/':
+                        case '÷': type = TokenType.Divide; break;
                         case '%': type = TokenType.Modulo; break;
                         case '^': type = TokenType.Power; break;
                         case '(': type = TokenType.LParen; break;
