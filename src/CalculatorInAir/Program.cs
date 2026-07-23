@@ -49,37 +49,45 @@ namespace CalculatorInAir
 
             if (!isNewInstance)
             {
-                // If an instance already exists, wake it up by posting WM_USER_WAKEUP to all windows of the existing process
-                int currentPid = Environment.ProcessId;
-                var processes = Process.GetProcessesByName("CalculatorInAir");
-                bool awakened = false;
-
-                foreach (var p in processes)
+                try
                 {
-                    if (p.Id != currentPid)
+                    // If an instance already exists, wake it up by posting WM_USER_WAKEUP to all windows of the existing process
+                    int currentPid = Environment.ProcessId;
+                    var processes = Process.GetProcessesByName("CalculatorInAir");
+                    bool awakened = false;
+
+                    foreach (var p in processes)
                     {
-                        EnumWindows((hWnd, lParam) =>
+                        if (p.Id != currentPid)
                         {
-                            GetWindowThreadProcessId(hWnd, out uint pid);
-                            if (pid == p.Id)
+                            EnumWindows((hWnd, lParam) =>
                             {
-                                PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
-                                awakened = true;
-                            }
-                            return true;
-                        }, IntPtr.Zero);
+                                try
+                                {
+                                    GetWindowThreadProcessId(hWnd, out uint pid);
+                                    if (pid == p.Id)
+                                    {
+                                        PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
+                                        awakened = true;
+                                    }
+                                }
+                                catch { }
+                                return true;
+                            }, IntPtr.Zero);
+                        }
                     }
-                }
 
-                if (!awakened)
-                {
-                    IntPtr hWnd = FindWindow(null, "Calculator in the Air");
-                    if (hWnd != IntPtr.Zero)
+                    if (!awakened)
                     {
-                        PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
+                        IntPtr hWnd = FindWindow(null, "Calculator in the Air");
+                        if (hWnd != IntPtr.Zero)
+                        {
+                            PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
+                        }
                     }
                 }
-                
+                catch { }
+
                 // Release mutex handle and exit second process
                 return;
             }

@@ -99,12 +99,15 @@ namespace CalculatorInAir
         {
             try
             {
-                var os = new OSVERSIONINFOEX();
-                os.dwOSVersionInfoSize = Marshal.SizeOf(os);
-                if (RtlGetVersion(ref os) == 0)
+                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
                 {
-                    return os.dwBuildNumber >= 22000;
+                    return true;
                 }
+            }
+            catch { }
+            try
+            {
+                return Environment.OSVersion.Version.Build >= 22000;
             }
             catch { }
             return false;
@@ -364,18 +367,22 @@ namespace CalculatorInAir
             // Enable Win11 Native Backdrop
             if (_isWin11OrGreater)
             {
-                int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
-                DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+                try
+                {
+                    int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
+                    DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
 
-                int cornerPreference = DWMWCP_ROUND;
-                DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+                    int cornerPreference = DWMWCP_ROUND;
+                    DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+                }
+                catch { }
             }
         }
 
         protected override void OnClosed(EventArgs e)
         {
-            _hwndSource?.RemoveHook(HwndHook);
-            UnregisterHotKey(_hwnd, HOTKEY_ID);
+            try { _hwndSource?.RemoveHook(HwndHook); } catch { }
+            try { UnregisterHotKey(_hwnd, HOTKEY_ID); } catch { }
             base.OnClosed(e);
         }
 
@@ -383,29 +390,33 @@ namespace CalculatorInAir
         {
             if (_hwnd == IntPtr.Zero) return;
 
-            // Clear previous hotkey first
-            UnregisterHotKey(_hwnd, HOTKEY_ID);
-
-            // Construct modifier mask
-            uint modifiers = 0;
-            if (_settings.Alt) modifiers |= 0x0001;
-            if (_settings.Ctrl) modifiers |= 0x0002;
-            if (_settings.Shift) modifiers |= 0x0004;
-            if (_settings.Win) modifiers |= 0x0008;
-            modifiers |= 0x4000; // MOD_NOREPEAT
-
-            uint vk = (uint)_settings.VirtualKey;
-
-            bool ok = RegisterHotKey(_hwnd, HOTKEY_ID, modifiers, vk);
-            if (!ok)
+            try
             {
-                MessageBox.Show(
-                    string.Format(Loc.Get("HotkeyConflict"), _settings.HotkeyDisplay),
-                    Loc.Get("HotkeyConflictTitle"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
+                // Clear previous hotkey first
+                UnregisterHotKey(_hwnd, HOTKEY_ID);
+
+                // Construct modifier mask
+                uint modifiers = 0;
+                if (_settings.Alt) modifiers |= 0x0001;
+                if (_settings.Ctrl) modifiers |= 0x0002;
+                if (_settings.Shift) modifiers |= 0x0004;
+                if (_settings.Win) modifiers |= 0x0008;
+                modifiers |= 0x4000; // MOD_NOREPEAT
+
+                uint vk = (uint)_settings.VirtualKey;
+
+                bool ok = RegisterHotKey(_hwnd, HOTKEY_ID, modifiers, vk);
+                if (!ok)
+                {
+                    MessageBox.Show(
+                        string.Format(Loc.Get("HotkeyConflict"), _settings.HotkeyDisplay),
+                        Loc.Get("HotkeyConflictTitle"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                }
             }
+            catch { }
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
