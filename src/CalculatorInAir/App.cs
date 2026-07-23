@@ -52,8 +52,22 @@ namespace CalculatorInAir
             // 3. Setup system tray integration
             SetupTrayIcon();
 
+            DispatcherUnhandledException += (s, args) =>
+            {
+                System.Windows.MessageBox.Show(
+                    $"Unhandled UI Exception:\n\n{args.Exception.Message}\n\n{args.Exception.StackTrace}",
+                    "Calculator in the Air - Exception",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error
+                );
+                args.Handled = true;
+            };
+
             // 4. Do not shutdown when main window is hidden (we want it persistent in background)
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            // 5. Show calculator window immediately on launch
+            _mainWindow.ShowWindow();
         }
 
         private void SetupTrayIcon()
