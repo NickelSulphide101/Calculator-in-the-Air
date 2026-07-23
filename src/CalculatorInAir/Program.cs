@@ -62,16 +62,12 @@ namespace CalculatorInAir
                         {
                             EnumWindows((hWnd, lParam) =>
                             {
-                                try
+                                GetWindowThreadProcessId(hWnd, out uint pid);
+                                if (pid == p.Id)
                                 {
-                                    GetWindowThreadProcessId(hWnd, out uint pid);
-                                    if (pid == p.Id)
-                                    {
-                                        PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
-                                        awakened = true;
-                                    }
+                                    PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
+                                    awakened = true;
                                 }
-                                catch { }
                                 return true;
                             }, IntPtr.Zero);
                         }

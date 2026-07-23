@@ -99,15 +99,12 @@ namespace CalculatorInAir
         {
             try
             {
-                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+                var os = new OSVERSIONINFOEX();
+                os.dwOSVersionInfoSize = Marshal.SizeOf(os);
+                if (RtlGetVersion(ref os) == 0)
                 {
-                    return true;
+                    return os.dwBuildNumber >= 22000;
                 }
-            }
-            catch { }
-            try
-            {
-                return Environment.OSVersion.Version.Build >= 22000;
             }
             catch { }
             return false;
@@ -118,34 +115,12 @@ namespace CalculatorInAir
             _settings = settings;
             _isWin11OrGreater = IsWindows11OrGreater();
 
-            if (_isWin11OrGreater)
-            {
-                AllowsTransparency = false;
-                WindowStyle = WindowStyle.None;
+            AllowsTransparency = true;
+            WindowStyle = WindowStyle.None;
 
-                _heightCollapsed = 59;
-                _heightExpanded = 116;
-                _windowWidth = 550;
-
-                // Setup WindowChrome to remove client borders while allows transparency is false
-                var chrome = new System.Windows.Shell.WindowChrome
-                {
-                    CaptionHeight = 0,
-                    ResizeBorderThickness = new Thickness(0),
-                    CornerRadius = new CornerRadius(0),
-                    GlassFrameThickness = new Thickness(-1)
-                };
-                System.Windows.Shell.WindowChrome.SetWindowChrome(this, chrome);
-            }
-            else
-            {
-                AllowsTransparency = true;
-                WindowStyle = WindowStyle.None;
-
-                _heightCollapsed = 109;
-                _heightExpanded = 166;
-                _windowWidth = 600;
-            }
+            _heightCollapsed = 109;
+            _heightExpanded = 166;
+            _windowWidth = 600;
 
             InitializeUI();
             Deactivated += MainWindow_Deactivated;
@@ -356,33 +331,47 @@ namespace CalculatorInAir
         {
             base.OnSourceInitialized(e);
 
-            // Win32 Interop Setup
-            var helper = new WindowInteropHelper(this);
-            _hwnd = helper.Handle;
-            _hwndSource = HwndSource.FromHwnd(_hwnd);
-            _hwndSource.AddHook(HwndHook);
-
-            RegisterHotkey();
-
-            // Enable Win11 Native Backdrop
-            if (_isWin11OrGreater)
+            try
             {
-                try
-                {
-                    int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
-                    DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+                // Win32 Interop Setup
+                var helper = new WindowInteropHelper(this);
+                _hwnd = helper.Handle;
+                _hwndSource = HwndSource.FromHwnd(_hwnd);
+                _hwndSource?.AddHook(HwndHook);
 
-                    int cornerPreference = DWMWCP_ROUND;
-                    DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+                RegisterHotkey();
+
+                // Enable Win11 Native Backdrop if supported
+                if (_isWin11OrGreater)
+                {
+                    try
+                    {
+                        int backdropType = DWMSBT_TRANSLUCENTAUTHORITATIVE; // Acrylic
+                        DwmSetWindowAttribute(_hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+
+                        int cornerPreference = DWMWCP_ROUND;
+                        DwmSetWindowAttribute(_hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+                    }
+                    catch { }
                 }
-                catch { }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OnSourceInitialized exception: {ex.Message}");
             }
         }
 
         protected override void OnClosed(EventArgs e)
         {
-            try { _hwndSource?.RemoveHook(HwndHook); } catch { }
-            try { UnregisterHotKey(_hwnd, HOTKEY_ID); } catch { }
+            try
+            {
+                _hwndSource?.RemoveHook(HwndHook);
+                if (_hwnd != IntPtr.Zero)
+                {
+                    UnregisterHotKey(_hwnd, HOTKEY_ID);
+                }
+            }
+            catch { }
             base.OnClosed(e);
         }
 
@@ -416,7 +405,10 @@ namespace CalculatorInAir
                     );
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RegisterHotkey exception: {ex.Message}");
+            }
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

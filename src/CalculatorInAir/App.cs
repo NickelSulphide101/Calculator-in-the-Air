@@ -168,7 +168,7 @@ namespace CalculatorInAir
                 }
                 finally
                 {
-                    try { DestroyIcon(hIcon); } catch { }
+                    DestroyIcon(hIcon); // Free the native GDI icon handle
                 }
             }
         }
