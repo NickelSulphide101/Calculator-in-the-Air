@@ -22,6 +22,8 @@ using Brushes = System.Windows.Media.Brushes;
 using FontFamily = System.Windows.Media.FontFamily;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using Clipboard = System.Windows.Clipboard;
+using Orientation = System.Windows.Controls.Orientation;
+using Cursors = System.Windows.Input.Cursors;
 
 namespace CalculatorInAir
 {

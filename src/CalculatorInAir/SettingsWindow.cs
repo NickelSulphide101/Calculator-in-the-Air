@@ -15,6 +15,7 @@ using Brushes = System.Windows.Media.Brushes;
 using FontFamily = System.Windows.Media.FontFamily;
 using Orientation = System.Windows.Controls.Orientation;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using Cursors = System.Windows.Input.Cursors;
 
 namespace CalculatorInAir
 {
@@ -845,6 +846,11 @@ namespace CalculatorInAir
             _onSaveCallback?.Invoke();
 
             Close();
+        }
+
+        public void ApplyTheme(bool isDark)
+        {
+            _isDarkTheme = isDark;
         }
 
         private void RevertAndClose()
