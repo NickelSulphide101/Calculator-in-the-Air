@@ -28,4 +28,16 @@
     <sys:String x:Key="HotkeyConflictTitle">快捷键冲突</sys:String>
     <sys:String x:Key="HotkeyWarningText">快捷键必须包含至少一个修饰键（如 Ctrl, Alt, Shift 或 Win），以防止您的键盘按键被全局锁定！</sys:String>
     <sys:String x:Key="HotkeyWarningTitle">不安全的快捷键</sys:String>
+    <sys:String x:Key="WindowOpacitySetting">窗口透明度：</sys:String>
+    <sys:String x:Key="WindowSizeSetting">窗口尺寸与字号：</sys:String>
+    <sys:String x:Key="WidthSetting">窗口宽度：</sys:String>
+    <sys:String x:Key="ScaleSetting">字号与缩放：</sys:String>
+    <sys:String x:Key="PresetOpaque">不透明</sys:String>
+    <sys:String x:Key="PresetRecommended">推荐</sys:String>
+    <sys:String x:Key="PresetLight">轻盈</sys:String>
+    <sys:String x:Key="PresetTransparent">高透</sys:String>
+    <sys:String x:Key="SizeCompact">紧凑 (480px)</sys:String>
+    <sys:String x:Key="SizeStandard">标准 (600px)</sys:String>
+    <sys:String x:Key="SizeWide">宽屏 (750px)</sys:String>
+    <sys:String x:Key="SizeLarge">大屏 (900px)</sys:String>
 </ResourceDictionary>

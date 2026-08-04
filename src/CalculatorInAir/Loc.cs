@@ -141,6 +141,30 @@ namespace CalculatorInAir
                     return isZh ? "快捷键必须包含至少一个修饰键（如 Ctrl, Alt, Shift 或 Win），以防止您的键盘按键被全局锁定！" : "The shortcut must contain at least one modifier key (Ctrl, Alt, Shift, or Win) to prevent your keyboard keys from being locked globally!";
                 case "HotkeyWarningTitle":
                     return isZh ? "不安全的快捷键" : "Unsafe Shortcut";
+                case "WindowOpacitySetting":
+                    return isZh ? "窗口透明度：" : "Window Opacity:";
+                case "WindowSizeSetting":
+                    return isZh ? "窗口尺寸与字号：" : "Window Size & Font:";
+                case "WidthSetting":
+                    return isZh ? "窗口宽度：" : "Window Width:";
+                case "ScaleSetting":
+                    return isZh ? "字号与缩放：" : "Font & Scaling:";
+                case "PresetOpaque":
+                    return isZh ? "不透明" : "Opaque";
+                case "PresetRecommended":
+                    return isZh ? "推荐" : "Balanced";
+                case "PresetLight":
+                    return isZh ? "轻盈" : "Light";
+                case "PresetTransparent":
+                    return isZh ? "高透" : "Transparent";
+                case "SizeCompact":
+                    return isZh ? "紧凑 (480px)" : "Compact (480px)";
+                case "SizeStandard":
+                    return isZh ? "标准 (600px)" : "Standard (600px)";
+                case "SizeWide":
+                    return isZh ? "宽屏 (750px)" : "Wide (750px)";
+                case "SizeLarge":
+                    return isZh ? "大屏 (900px)" : "Large (900px)";
                 default:
                     return key;
             }

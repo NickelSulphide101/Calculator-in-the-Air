@@ -28,4 +28,16 @@
     <sys:String x:Key="HotkeyConflictTitle">Hotkey Conflict</sys:String>
     <sys:String x:Key="HotkeyWarningText">The shortcut must contain at least one modifier key (Ctrl, Alt, Shift, or Win) to prevent your keyboard keys from being locked globally!</sys:String>
     <sys:String x:Key="HotkeyWarningTitle">Unsafe Shortcut</sys:String>
+    <sys:String x:Key="WindowOpacitySetting">Window Opacity:</sys:String>
+    <sys:String x:Key="WindowSizeSetting">Window Size &amp; Font:</sys:String>
+    <sys:String x:Key="WidthSetting">Window Width:</sys:String>
+    <sys:String x:Key="ScaleSetting">Font &amp; Scaling:</sys:String>
+    <sys:String x:Key="PresetOpaque">Opaque</sys:String>
+    <sys:String x:Key="PresetRecommended">Balanced</sys:String>
+    <sys:String x:Key="PresetLight">Light</sys:String>
+    <sys:String x:Key="PresetTransparent">Transparent</sys:String>
+    <sys:String x:Key="SizeCompact">Compact (480px)</sys:String>
+    <sys:String x:Key="SizeStandard">Standard (600px)</sys:String>
+    <sys:String x:Key="SizeWide">Wide (750px)</sys:String>
+    <sys:String x:Key="SizeLarge">Large (900px)</sys:String>
 </ResourceDictionary>

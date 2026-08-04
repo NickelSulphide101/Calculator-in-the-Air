@@ -13,7 +13,6 @@ using Color = System.Windows.Media.Color;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Brushes = System.Windows.Media.Brushes;
 using FontFamily = System.Windows.Media.FontFamily;
-using Cursors = System.Windows.Input.Cursors;
 using Orientation = System.Windows.Controls.Orientation;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
@@ -22,6 +21,7 @@ namespace CalculatorInAir
     public class SettingsWindow : Window
     {
         private readonly AppSettings _settings;
+        private readonly MainWindow? _mainWindow;
         private readonly Action _onSaveCallback;
 
         private Button _recordButton = null!;
@@ -30,14 +30,38 @@ namespace CalculatorInAir
         private CheckBox _hideOnBlurCheckBox = null!;
         private CheckBox _copyOnEnterCheckBox = null!;
         private ComboBox _themeComboBox = null!;
+
+        // Opacity Controls
+        private Slider _opacitySlider = null!;
+        private TextBlock _opacityValueText = null!;
+        private readonly List<Button> _opacityPillButtons = new List<Button>();
+
+        // Size & Font Scaling Controls
+        private Slider _widthSlider = null!;
+        private TextBlock _widthValueText = null!;
+        private Slider _scaleSlider = null!;
+        private TextBlock _scaleValueText = null!;
+        private readonly List<Button> _sizePillButtons = new List<Button>();
+
         private Button _saveButton = null!;
         private Button _cancelButton = null!;
         private TextBlock _headerTitle = null!;
         private List<TextBlock> _labels = new List<TextBlock>();
         private bool _isDarkTheme = true;
+        
+        // Original states for cancel/revert
         private string _originalThemeSetting = "Auto";
+        private int _originalOpacitySetting = 100;
+        private double _originalWidthSetting = 600.0;
+        private double _originalScaleSetting = 1.0;
+
         private bool _isInitializing = true;
         private bool _isSaved = false;
+
+        // Current temporary values during editing
+        private int _currentOpacity = 100;
+        private double _currentWidth = 600.0;
+        private double _currentScale = 1.0;
 
         // Recording state
         private bool _isRecording = false;
@@ -49,10 +73,24 @@ namespace CalculatorInAir
         private string _recordedDisplay = "";
 
         public SettingsWindow(AppSettings settings, Action onSaveCallback)
+            : this(settings, null, onSaveCallback)
+        {
+        }
+
+        public SettingsWindow(AppSettings settings, MainWindow? mainWindow, Action onSaveCallback)
         {
             _settings = settings;
+            _mainWindow = mainWindow;
             _onSaveCallback = onSaveCallback;
+
             _originalThemeSetting = settings.Theme;
+            _originalOpacitySetting = settings.WindowOpacity;
+            _originalWidthSetting = settings.WindowWidth;
+            _originalScaleSetting = settings.WindowScale;
+
+            _currentOpacity = settings.WindowOpacity;
+            _currentWidth = settings.WindowWidth;
+            _currentScale = settings.WindowScale;
 
             // Determine active theme
             bool isDark = true;
@@ -80,8 +118,8 @@ namespace CalculatorInAir
         private void InitializeUI()
         {
             Title = Loc.Get("SettingsTitle");
-            Width = 460;
-            Height = 485;
+            Width = 500;
+            Height = 650;
             ResizeMode = ResizeMode.NoResize;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Arial");
@@ -92,9 +130,9 @@ namespace CalculatorInAir
 
             // Main layout
             var mainGrid = new Grid();
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) }); // Header
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(55) }); // Header
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Content
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(65) }); // Actions
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(60) }); // Actions
 
             // 1. Header
             var headerPanel = new StackPanel { Margin = new Thickness(20, 15, 20, 0) };
@@ -109,162 +147,47 @@ namespace CalculatorInAir
             Grid.SetRow(headerPanel, 0);
             mainGrid.Children.Add(headerPanel);
 
-            // 2. Content
-            var contentGrid = new Grid { Margin = new Thickness(20, 5, 20, 5) };
-            contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
-            contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Hotkey
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Precision
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Language
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // Theme
-            contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Behaviors
+            // 2. Content with ScrollViewer for clean scrolling
+            var scrollViewer = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Margin = new Thickness(20, 5, 20, 5)
+            };
+
+            var contentStack = new StackPanel();
 
             // 2.1 Hotkey Row
-            var hotkeyLabel = CreateLabel(Loc.Get("GlobalShortcut"));
-            Grid.SetRow(hotkeyLabel, 0);
-            Grid.SetColumn(hotkeyLabel, 0);
-            contentGrid.Children.Add(hotkeyLabel);
-
-            _recordButton = new Button
-            {
-                Content = _recordedDisplay,
-                Height = 30,
-                FontWeight = FontWeights.SemiBold,
-                Style = (Style)FindResource("StandardButtonStyle")
-            };
-            _recordButton.Click += (s, e) => StartRecording();
-            Grid.SetRow(_recordButton, 0);
-            Grid.SetColumn(_recordButton, 1);
-            contentGrid.Children.Add(_recordButton);
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("GlobalShortcut"), CreateHotkeyControl()));
 
             // 2.2 Precision Row
-            var precisionLabel = CreateLabel(Loc.Get("Precision"));
-            Grid.SetRow(precisionLabel, 1);
-            Grid.SetColumn(precisionLabel, 0);
-            contentGrid.Children.Add(precisionLabel);
-
-            _precisionComboBox = new ComboBox
-            {
-                Height = 30
-            };
-            _precisionComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
-            _precisionComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
-            _precisionComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
-
-            _precisionComboBox.Items.Add(Loc.Get("PrecisionAuto"));
-            for (int i = 0; i <= 10; i++)
-            {
-                _precisionComboBox.Items.Add(i.ToString());
-            }
-            if (_settings.DecimalPlaces < 0)
-                _precisionComboBox.SelectedIndex = 0;
-            else
-                _precisionComboBox.SelectedIndex = _settings.DecimalPlaces + 1;
-
-            Grid.SetRow(_precisionComboBox, 1);
-            Grid.SetColumn(_precisionComboBox, 1);
-            contentGrid.Children.Add(_precisionComboBox);
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("Precision"), CreatePrecisionControl()));
 
             // 2.3 Language Row
-            var languageLabel = CreateLabel(Loc.Get("LanguageSetting"));
-            Grid.SetRow(languageLabel, 2);
-            Grid.SetColumn(languageLabel, 0);
-            contentGrid.Children.Add(languageLabel);
-
-            _languageComboBox = new ComboBox
-            {
-                Height = 30
-            };
-            _languageComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
-            _languageComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
-            _languageComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
-
-            _languageComboBox.Items.Add(Loc.Get("LanguageAuto"));
-            _languageComboBox.Items.Add("简体中文");
-            _languageComboBox.Items.Add("English (UK)");
-
-            if (_settings.LanguagePreference == "zh_CN")
-                _languageComboBox.SelectedIndex = 1;
-            else if (_settings.LanguagePreference == "en_GB")
-                _languageComboBox.SelectedIndex = 2;
-            else
-                _languageComboBox.SelectedIndex = 0;
-
-            Grid.SetRow(_languageComboBox, 2);
-            Grid.SetColumn(_languageComboBox, 1);
-            contentGrid.Children.Add(_languageComboBox);
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("LanguageSetting"), CreateLanguageControl()));
 
             // 2.4 Theme Row
-            var themeLabel = CreateLabel(Loc.Get("ThemeSetting"));
-            Grid.SetRow(themeLabel, 3);
-            Grid.SetColumn(themeLabel, 0);
-            contentGrid.Children.Add(themeLabel);
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("ThemeSetting"), CreateThemeControl()));
 
-            _themeComboBox = new ComboBox
-            {
-                Height = 30
-            };
-            _themeComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
-            _themeComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
-            _themeComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
+            // 2.5 Opacity Row (Scheme A - Preset Pills + Fluid Slider + Translucent Preview)
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("WindowOpacitySetting"), CreateOpacityControl(), isTopAligned: true));
 
-            _themeComboBox.Items.Add(Loc.Get("ThemeAuto"));
-            _themeComboBox.Items.Add(Loc.Get("ThemeDark"));
-            _themeComboBox.Items.Add(Loc.Get("ThemeLight"));
+            // 2.6 Window Size & Font Scaling Row
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("WindowSizeSetting"), CreateSizeAndScaleControl(), isTopAligned: true));
 
-            if (_settings.Theme == "Dark")
-                _themeComboBox.SelectedIndex = 1;
-            else if (_settings.Theme == "Light")
-                _themeComboBox.SelectedIndex = 2;
-            else
-                _themeComboBox.SelectedIndex = 0;
+            // 2.7 Behaviors Row
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("Behavior"), CreateBehaviorControl(), isTopAligned: true));
 
-            _themeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
-
-            Grid.SetRow(_themeComboBox, 3);
-            Grid.SetColumn(_themeComboBox, 1);
-            contentGrid.Children.Add(_themeComboBox);
-
-            // 2.5 Behaviors Row
-            var behaviorLabel = CreateLabel(Loc.Get("Behavior"));
-            behaviorLabel.Margin = new Thickness(0, 10, 0, 5);
-            Grid.SetRow(behaviorLabel, 4);
-            Grid.SetColumn(behaviorLabel, 0);
-            contentGrid.Children.Add(behaviorLabel);
-
-            var behaviorPanel = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
-
-            _hideOnBlurCheckBox = new CheckBox
-            {
-                Content = Loc.Get("HideOnBlur"),
-                IsChecked = _settings.HideOnBlur,
-                Margin = new Thickness(0, 5, 0, 8)
-            };
-            _hideOnBlurCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
-
-            _copyOnEnterCheckBox = new CheckBox
-            {
-                Content = Loc.Get("CopyOnEnter"),
-                IsChecked = _settings.CopyOnEnter,
-                Margin = new Thickness(0, 5, 0, 5)
-            };
-            _copyOnEnterCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
-
-            behaviorPanel.Children.Add(_hideOnBlurCheckBox);
-            behaviorPanel.Children.Add(_copyOnEnterCheckBox);
-            Grid.SetRow(behaviorPanel, 4);
-            Grid.SetColumn(behaviorPanel, 1);
-            contentGrid.Children.Add(behaviorPanel);
-
-            Grid.SetRow(contentGrid, 1);
-            mainGrid.Children.Add(contentGrid);
+            scrollViewer.Content = contentStack;
+            Grid.SetRow(scrollViewer, 1);
+            mainGrid.Children.Add(scrollViewer);
 
             // 3. Actions Panel
             var actionsPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(0, 0, 20, 0)
+                Margin = new Thickness(0, 10, 20, 15)
             };
 
             _saveButton = new Button
@@ -285,13 +208,7 @@ namespace CalculatorInAir
                 Height = 32,
                 Style = (Style)FindResource("StandardButtonStyle")
             };
-            _cancelButton.Click += (s, e) => 
-            {
-                // Revert theme preview
-                _settings.Theme = _originalThemeSetting;
-                (System.Windows.Application.Current as App)?.ApplyTheme();
-                Close();
-            };
+            _cancelButton.Click += (s, e) => RevertAndClose();
             actionsPanel.Children.Add(_cancelButton);
 
             Grid.SetRow(actionsPanel, 2);
@@ -301,6 +218,27 @@ namespace CalculatorInAir
 
             // Wire key events to the whole window for hotkey recording
             PreviewKeyDown += SettingsWindow_KeyDown;
+        }
+
+        private Grid CreateSettingRow(string labelText, FrameworkElement controlElement, bool isTopAligned = false)
+        {
+            var grid = new Grid { Margin = new Thickness(0, 6, 0, 6) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var label = CreateLabel(labelText);
+            if (isTopAligned)
+            {
+                label.VerticalAlignment = VerticalAlignment.Top;
+                label.Margin = new Thickness(0, 6, 10, 0);
+            }
+            Grid.SetColumn(label, 0);
+            grid.Children.Add(label);
+
+            Grid.SetColumn(controlElement, 1);
+            grid.Children.Add(controlElement);
+
+            return grid;
         }
 
         private TextBlock CreateLabel(string text)
@@ -317,6 +255,392 @@ namespace CalculatorInAir
             _labels.Add(lbl);
             return lbl;
         }
+
+        #region Control Creators
+
+        private FrameworkElement CreateHotkeyControl()
+        {
+            _recordButton = new Button
+            {
+                Content = _recordedDisplay,
+                Height = 30,
+                FontWeight = FontWeights.SemiBold,
+                Style = (Style)FindResource("StandardButtonStyle")
+            };
+            _recordButton.Click += (s, e) => StartRecording();
+            return _recordButton;
+        }
+
+        private FrameworkElement CreatePrecisionControl()
+        {
+            _precisionComboBox = new ComboBox { Height = 30 };
+            _precisionComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
+            _precisionComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
+            _precisionComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
+
+            _precisionComboBox.Items.Add(Loc.Get("PrecisionAuto"));
+            for (int i = 0; i <= 10; i++)
+            {
+                _precisionComboBox.Items.Add(i.ToString());
+            }
+            if (_settings.DecimalPlaces < 0)
+                _precisionComboBox.SelectedIndex = 0;
+            else
+                _precisionComboBox.SelectedIndex = _settings.DecimalPlaces + 1;
+
+            return _precisionComboBox;
+        }
+
+        private FrameworkElement CreateLanguageControl()
+        {
+            _languageComboBox = new ComboBox { Height = 30 };
+            _languageComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
+            _languageComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
+            _languageComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
+
+            _languageComboBox.Items.Add(Loc.Get("LanguageAuto"));
+            _languageComboBox.Items.Add("简体中文");
+            _languageComboBox.Items.Add("English (UK)");
+
+            if (_settings.LanguagePreference == "zh_CN")
+                _languageComboBox.SelectedIndex = 1;
+            else if (_settings.LanguagePreference == "en_GB")
+                _languageComboBox.SelectedIndex = 2;
+            else
+                _languageComboBox.SelectedIndex = 0;
+
+            return _languageComboBox;
+        }
+
+        private FrameworkElement CreateThemeControl()
+        {
+            _themeComboBox = new ComboBox { Height = 30 };
+            _themeComboBox.SetResourceReference(ComboBox.BackgroundProperty, "ComboBoxBackgroundBrush");
+            _themeComboBox.SetResourceReference(ComboBox.ForegroundProperty, "ComboBoxForegroundBrush");
+            _themeComboBox.SetResourceReference(ComboBox.BorderBrushProperty, "ComboBoxBorderBrush");
+
+            _themeComboBox.Items.Add(Loc.Get("ThemeAuto"));
+            _themeComboBox.Items.Add(Loc.Get("ThemeDark"));
+            _themeComboBox.Items.Add(Loc.Get("ThemeLight"));
+
+            if (_settings.Theme == "Dark")
+                _themeComboBox.SelectedIndex = 1;
+            else if (_settings.Theme == "Light")
+                _themeComboBox.SelectedIndex = 2;
+            else
+                _themeComboBox.SelectedIndex = 0;
+
+            _themeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
+            return _themeComboBox;
+        }
+
+        private FrameworkElement CreateOpacityControl()
+        {
+            var panel = new StackPanel();
+
+            // 1. Preset Pills Panel
+            var pillsPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            var presets = new (string text, int val)[]
+            {
+                (Loc.Get("PresetOpaque"), 100),
+                (Loc.Get("PresetRecommended"), 85),
+                (Loc.Get("PresetLight"), 70),
+                (Loc.Get("PresetTransparent"), 50)
+            };
+
+            foreach (var (text, val) in presets)
+            {
+                var pill = CreatePillButton($"{text} ({val}%)", val == _currentOpacity);
+                int targetVal = val;
+                pill.Click += (s, e) =>
+                {
+                    _currentOpacity = targetVal;
+                    _opacitySlider.Value = targetVal;
+                    UpdateOpacityPillsHighlight();
+                    ApplyLivePreview();
+                };
+                _opacityPillButtons.Add(pill);
+                pillsPanel.Children.Add(pill);
+            }
+            panel.Children.Add(pillsPanel);
+
+            // 2. Slider & Percentage Display
+            var sliderGrid = new Grid();
+            sliderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            sliderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) });
+
+            _opacitySlider = new Slider
+            {
+                Minimum = 30,
+                Maximum = 100,
+                Value = _currentOpacity,
+                TickFrequency = 1,
+                IsSnapToTickEnabled = true,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            _opacityValueText = new TextBlock
+            {
+                Text = $"{_currentOpacity}%",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(5, 0, 0, 0)
+            };
+            _opacityValueText.SetResourceReference(TextBlock.ForegroundProperty, "SettingsForegroundBrush");
+
+            // Live preview & Translucent settings window while dragging
+            _opacitySlider.ValueChanged += (s, e) =>
+            {
+                if (_isInitializing) return;
+                _currentOpacity = (int)e.NewValue;
+                _opacityValueText.Text = $"{_currentOpacity}%";
+                UpdateOpacityPillsHighlight();
+                ApplyLivePreview();
+            };
+
+            // Enable Obstruction-Free Preview during dragging
+            _opacitySlider.PreviewMouseDown += (s, e) => { this.Opacity = 0.35; };
+            _opacitySlider.PreviewMouseUp += (s, e) => { this.Opacity = 1.0; };
+            _opacitySlider.LostFocus += (s, e) => { this.Opacity = 1.0; };
+
+            Grid.SetColumn(_opacitySlider, 0);
+            Grid.SetColumn(_opacityValueText, 1);
+            sliderGrid.Children.Add(_opacitySlider);
+            sliderGrid.Children.Add(_opacityValueText);
+
+            panel.Children.Add(sliderGrid);
+            return panel;
+        }
+
+        private FrameworkElement CreateSizeAndScaleControl()
+        {
+            var panel = new StackPanel();
+
+            // 1. Preset Size Pills Panel
+            var pillsPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+
+            var sizePresets = new (string key, double w, double scale)[]
+            {
+                ("SizeCompact", 480, 0.9),
+                ("SizeStandard", 600, 1.0),
+                ("SizeWide", 750, 1.2),
+                ("SizeLarge", 900, 1.4)
+            };
+
+            foreach (var (key, w, scale) in sizePresets)
+            {
+                bool isSel = Math.Abs(_currentWidth - w) < 5 && Math.Abs(_currentScale - scale) < 0.05;
+                var pill = CreatePillButton(Loc.Get(key), isSel);
+                double targetW = w;
+                double targetScale = scale;
+
+                pill.Click += (s, e) =>
+                {
+                    _currentWidth = targetW;
+                    _currentScale = targetScale;
+                    _widthSlider.Value = targetW;
+                    _scaleSlider.Value = targetScale * 100;
+                    UpdateSizePillsHighlight();
+                    ApplyLivePreview();
+                };
+                _sizePillButtons.Add(pill);
+                pillsPanel.Children.Add(pill);
+            }
+            panel.Children.Add(pillsPanel);
+
+            // 2. Width Slider
+            var widthGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+            widthGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) });
+            widthGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            widthGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
+
+            var widthLabel = new TextBlock
+            {
+                Text = Loc.Get("WidthSetting"),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            widthLabel.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+
+            _widthSlider = new Slider
+            {
+                Minimum = 420,
+                Maximum = 900,
+                Value = _currentWidth,
+                TickFrequency = 10,
+                IsSnapToTickEnabled = true,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            _widthValueText = new TextBlock
+            {
+                Text = $"{(int)_currentWidth} px",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold
+            };
+            _widthValueText.SetResourceReference(TextBlock.ForegroundProperty, "SettingsForegroundBrush");
+
+            _widthSlider.ValueChanged += (s, e) =>
+            {
+                if (_isInitializing) return;
+                _currentWidth = e.NewValue;
+                _widthValueText.Text = $"{(int)_currentWidth} px";
+                UpdateSizePillsHighlight();
+                ApplyLivePreview();
+            };
+
+            _widthSlider.PreviewMouseDown += (s, e) => { this.Opacity = 0.35; };
+            _widthSlider.PreviewMouseUp += (s, e) => { this.Opacity = 1.0; };
+
+            Grid.SetColumn(widthLabel, 0);
+            Grid.SetColumn(_widthSlider, 1);
+            Grid.SetColumn(_widthValueText, 2);
+            widthGrid.Children.Add(widthLabel);
+            widthGrid.Children.Add(_widthSlider);
+            widthGrid.Children.Add(_widthValueText);
+            panel.Children.Add(widthGrid);
+
+            // 3. Scale Slider
+            var scaleGrid = new Grid();
+            scaleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) });
+            scaleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            scaleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
+
+            var scaleLabel = new TextBlock
+            {
+                Text = Loc.Get("ScaleSetting"),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            scaleLabel.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+
+            _scaleSlider = new Slider
+            {
+                Minimum = 80,
+                Maximum = 160,
+                Value = _currentScale * 100,
+                TickFrequency = 5,
+                IsSnapToTickEnabled = true,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            _scaleValueText = new TextBlock
+            {
+                Text = $"{(int)(_currentScale * 100)} %",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold
+            };
+            _scaleValueText.SetResourceReference(TextBlock.ForegroundProperty, "SettingsForegroundBrush");
+
+            _scaleSlider.ValueChanged += (s, e) =>
+            {
+                if (_isInitializing) return;
+                _currentScale = e.NewValue / 100.0;
+                _scaleValueText.Text = $"{(int)e.NewValue} %";
+                UpdateSizePillsHighlight();
+                ApplyLivePreview();
+            };
+
+            _scaleSlider.PreviewMouseDown += (s, e) => { this.Opacity = 0.35; };
+            _scaleSlider.PreviewMouseUp += (s, e) => { this.Opacity = 1.0; };
+
+            Grid.SetColumn(scaleLabel, 0);
+            Grid.SetColumn(_scaleSlider, 1);
+            Grid.SetColumn(_scaleValueText, 2);
+            scaleGrid.Children.Add(scaleLabel);
+            scaleGrid.Children.Add(_scaleSlider);
+            scaleGrid.Children.Add(_scaleValueText);
+            panel.Children.Add(scaleGrid);
+
+            return panel;
+        }
+
+        private FrameworkElement CreateBehaviorControl()
+        {
+            var behaviorPanel = new StackPanel();
+
+            _hideOnBlurCheckBox = new CheckBox
+            {
+                Content = Loc.Get("HideOnBlur"),
+                IsChecked = _settings.HideOnBlur,
+                Margin = new Thickness(0, 2, 0, 6)
+            };
+            _hideOnBlurCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+
+            _copyOnEnterCheckBox = new CheckBox
+            {
+                Content = Loc.Get("CopyOnEnter"),
+                IsChecked = _settings.CopyOnEnter,
+                Margin = new Thickness(0, 2, 0, 2)
+            };
+            _copyOnEnterCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+
+            behaviorPanel.Children.Add(_hideOnBlurCheckBox);
+            behaviorPanel.Children.Add(_copyOnEnterCheckBox);
+            return behaviorPanel;
+        }
+
+        private Button CreatePillButton(string text, bool isSelected)
+        {
+            var btn = new Button
+            {
+                Content = text,
+                Height = 26,
+                Padding = new Thickness(8, 0, 8, 0),
+                Margin = new Thickness(0, 0, 6, 0),
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource(isSelected ? "AccentButtonStyle" : "StandardButtonStyle")
+            };
+            return btn;
+        }
+
+        private void UpdateOpacityPillsHighlight()
+        {
+            int[] vals = { 100, 85, 70, 50 };
+            for (int i = 0; i < _opacityPillButtons.Count && i < vals.Length; i++)
+            {
+                bool isMatch = _currentOpacity == vals[i];
+                _opacityPillButtons[i].Style = (Style)FindResource(isMatch ? "AccentButtonStyle" : "StandardButtonStyle");
+            }
+        }
+
+        private void UpdateSizePillsHighlight()
+        {
+            var presets = new (double w, double scale)[]
+            {
+                (480, 0.9), (600, 1.0), (750, 1.2), (900, 1.4)
+            };
+
+            for (int i = 0; i < _sizePillButtons.Count && i < presets.Length; i++)
+            {
+                bool isMatch = Math.Abs(_currentWidth - presets[i].w) < 5 && Math.Abs(_currentScale - presets[i].scale) < 0.05;
+                _sizePillButtons[i].Style = (Style)FindResource(isMatch ? "AccentButtonStyle" : "StandardButtonStyle");
+            }
+        }
+
+        private void ApplyLivePreview()
+        {
+            _mainWindow?.ApplyWindowLayout(_currentWidth, _currentScale, _currentOpacity);
+        }
+
+        #endregion
 
         private void StartRecording()
         {
@@ -459,7 +783,12 @@ namespace CalculatorInAir
                 selectedTheme = "Light";
             _settings.Theme = selectedTheme;
 
-            // 5. Update behavior checkboxes
+            // 5. Update Opacity, Width & Scale
+            _settings.WindowOpacity = _currentOpacity;
+            _settings.WindowWidth = _currentWidth;
+            _settings.WindowScale = _currentScale;
+
+            // 6. Update behavior checkboxes
             _settings.HideOnBlur = _hideOnBlurCheckBox.IsChecked ?? true;
             _settings.CopyOnEnter = _copyOnEnterCheckBox.IsChecked ?? true;
 
@@ -474,13 +803,23 @@ namespace CalculatorInAir
             Close();
         }
 
+        private void RevertAndClose()
+        {
+            _settings.Theme = _originalThemeSetting;
+            _settings.WindowOpacity = _originalOpacitySetting;
+            _settings.WindowWidth = _originalWidthSetting;
+            _settings.WindowScale = _originalScaleSetting;
+
+            _mainWindow?.ApplyWindowLayout(_originalWidthSetting, _originalScaleSetting, _originalOpacitySetting);
+            (System.Windows.Application.Current as App)?.ApplyTheme();
+            Close();
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             if (!_isSaved)
             {
-                // Revert theme preview
-                _settings.Theme = _originalThemeSetting;
-                (System.Windows.Application.Current as App)?.ApplyTheme();
+                RevertAndClose();
             }
             base.OnClosed(e);
         }
@@ -497,12 +836,6 @@ namespace CalculatorInAir
 
             _settings.Theme = selectedTheme;
             (System.Windows.Application.Current as App)?.ApplyTheme();
-        }
-
-        public void ApplyTheme(bool isDark)
-        {
-            _isDarkTheme = isDark;
-            // WPF DynamicResource handles everything automatically!
         }
     }
 }

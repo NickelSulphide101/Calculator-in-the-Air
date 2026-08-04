@@ -15,5 +15,8 @@ namespace CalculatorInAir
         public bool CopyOnEnter { get; set; } = true;
         public string LanguagePreference { get; set; } = "Auto"; // "Auto", "zh_CN", "en_GB"
         public string Theme { get; set; } = "Auto"; // "Auto", "Dark", "Light"
+        public int WindowOpacity { get; set; } = 100; // 30 - 100
+        public double WindowWidth { get; set; } = 600.0; // 420 - 900
+        public double WindowScale { get; set; } = 1.0; // 0.8 - 1.6
     }
 }

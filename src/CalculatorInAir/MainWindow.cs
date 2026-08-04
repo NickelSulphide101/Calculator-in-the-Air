@@ -29,9 +29,15 @@ namespace CalculatorInAir
         private const int WM_HOTKEY = 0x0312;
         private const int WM_USER_WAKEUP = 0x0400 + 101;
 
-        private readonly double _heightCollapsed;
-        private readonly double _heightExpanded;
-        private readonly double _windowWidth;
+        private double _heightCollapsed = 109;
+        private double _heightExpanded = 166;
+        private double _windowWidth = 600;
+        private double _windowScale = 1.0;
+        private double _targetOpacity = 1.0;
+
+        // UI Grids for dynamic scaling
+        private Grid _inputGrid = null!;
+        private Grid _resultContentGrid = null!;
 
         // Settings & State
         private readonly AppSettings _settings;
@@ -138,6 +144,7 @@ namespace CalculatorInAir
             _windowWidth = 600;
 
             InitializeUI();
+            ApplyWindowLayout(_settings.WindowWidth, _settings.WindowScale, _settings.WindowOpacity, isInitializing: true);
             Deactivated += MainWindow_Deactivated;
         }
 
@@ -199,9 +206,9 @@ namespace CalculatorInAir
             gridLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Result row (collapsible)
 
             // 2.1 Input Panel (Icon + Input text box + Placeholder)
-            var inputGrid = new Grid { Height = 56 };
-            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) }); // Icon
-            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Textbox
+            _inputGrid = new Grid { Height = 56 };
+            _inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) }); // Icon
+            _inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Textbox
 
             // Vector calculator icon on the left
             _calculatorIcon = new Path
@@ -215,7 +222,7 @@ namespace CalculatorInAir
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             _calculatorIcon.SetResourceReference(Path.FillProperty, "CalculatorIconBrush");
-            inputGrid.Children.Add(_calculatorIcon);
+            _inputGrid.Children.Add(_calculatorIcon);
             Grid.SetColumn(_calculatorIcon, 0);
 
             // Container for input box and placeholder overlapping
@@ -248,11 +255,11 @@ namespace CalculatorInAir
             _inputTextBox.PreviewKeyDown += InputTextBox_PreviewKeyDown;
             textBoxContainer.Children.Add(_inputTextBox);
 
-            inputGrid.Children.Add(textBoxContainer);
+            _inputGrid.Children.Add(textBoxContainer);
             Grid.SetColumn(textBoxContainer, 1);
 
-            Grid.SetRow(inputGrid, 0);
-            gridLayout.Children.Add(inputGrid);
+            Grid.SetRow(_inputGrid, 0);
+            gridLayout.Children.Add(_inputGrid);
 
             // 2.2 Result Panel (Separator line + equals glyph + Result value + tooltip)
             _resultBorder = new Border
@@ -276,8 +283,8 @@ namespace CalculatorInAir
             resultPanelGrid.Children.Add(_separator);
 
             // Content Grid
-            var resultContentGrid = new Grid { Height = 56 };
-            resultContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) }); // "=" sign
+            _resultContentGrid = new Grid { Height = 56 };
+            _resultContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) }); // "=" sign
             resultContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Result text
             resultContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // Hint text
 
@@ -293,7 +300,7 @@ namespace CalculatorInAir
             };
             _equalsLabel.SetResourceReference(TextBlock.ForegroundProperty, "EqualsLabelBrush");
             Grid.SetColumn(_equalsLabel, 0);
-            resultContentGrid.Children.Add(_equalsLabel);
+            _resultContentGrid.Children.Add(_equalsLabel);
 
             // Main Result display TextBlock
             _resultTextBlock = new TextBlock
@@ -310,7 +317,7 @@ namespace CalculatorInAir
             System.Windows.Documents.Typography.SetNumeralAlignment(_resultTextBlock, System.Windows.FontNumeralAlignment.Tabular);
 
             Grid.SetColumn(_resultTextBlock, 1);
-            resultContentGrid.Children.Add(_resultTextBlock);
+            _resultContentGrid.Children.Add(_resultTextBlock);
 
             // Action hints on the right
             _hintTextBlock = new TextBlock
@@ -321,10 +328,10 @@ namespace CalculatorInAir
             };
             _hintTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "HintForegroundBrush");
             Grid.SetColumn(_hintTextBlock, 2);
-            resultContentGrid.Children.Add(_hintTextBlock);
+            _resultContentGrid.Children.Add(_hintTextBlock);
 
-            Grid.SetRow(resultContentGrid, 1);
-            resultPanelGrid.Children.Add(resultContentGrid);
+            Grid.SetRow(_resultContentGrid, 1);
+            resultPanelGrid.Children.Add(_resultContentGrid);
 
             _resultBorder.Child = resultPanelGrid;
             Grid.SetRow(_resultBorder, 1);
@@ -490,7 +497,7 @@ namespace CalculatorInAir
             var fadeIn = new DoubleAnimation
             {
                 From = 0,
-                To = 1,
+                To = _targetOpacity,
                 Duration = TimeSpan.FromMilliseconds(180),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
@@ -790,10 +797,11 @@ namespace CalculatorInAir
             if (_isSettingsWindowOpen) return;
 
             _isSettingsWindowOpen = true;
-            var settingsWindow = new SettingsWindow(_settings, () =>
+            var settingsWindow = new SettingsWindow(_settings, this, () =>
             {
                 RegisterHotkey();
                 ApplyLanguage();
+                ApplyWindowLayout(_settings.WindowWidth, _settings.WindowScale, _settings.WindowOpacity);
                 (System.Windows.Application.Current as App)?.OnSettingsSaved();
             });
 
@@ -807,6 +815,50 @@ namespace CalculatorInAir
             };
 
             settingsWindow.ShowDialog();
+        }
+
+        public void ApplyWindowLayout(double width, double scale, int opacityPercent, bool isInitializing = false)
+        {
+            _windowWidth = Math.Clamp(width, 420.0, 900.0);
+            _windowScale = Math.Clamp(scale, 0.8, 1.6);
+            _targetOpacity = Math.Clamp(opacityPercent / 100.0, 0.3, 1.0);
+
+            double baseContentHeight = 56 * _windowScale;
+            double marginHeight = _isWin11OrGreater ? 0 : 50;
+            double borderPaddingHeight = 3;
+
+            _heightCollapsed = baseContentHeight + marginHeight + borderPaddingHeight;
+            _heightExpanded = (baseContentHeight * 2) + marginHeight + borderPaddingHeight;
+
+            Width = _windowWidth;
+            if (_resultBorder != null && _resultBorder.Visibility == Visibility.Visible)
+            {
+                Height = _heightExpanded;
+            }
+            else
+            {
+                Height = _heightCollapsed;
+            }
+
+            if (_inputGrid != null) _inputGrid.Height = baseContentHeight;
+            if (_resultContentGrid != null) _resultContentGrid.Height = baseContentHeight;
+
+            if (_inputTextBox != null) _inputTextBox.FontSize = 18 * _windowScale;
+            if (_placeholderTextBlock != null) _placeholderTextBlock.FontSize = 18 * _windowScale;
+            if (_resultTextBlock != null) _resultTextBlock.FontSize = 22 * _windowScale;
+            if (_hintTextBlock != null) _hintTextBlock.FontSize = 11 * _windowScale;
+            if (_equalsLabel != null) _equalsLabel.FontSize = 22 * _windowScale;
+
+            if (_calculatorIcon != null)
+            {
+                _calculatorIcon.Width = 22 * _windowScale;
+                _calculatorIcon.Height = 22 * _windowScale;
+            }
+
+            if (!isInitializing && this.IsVisible && !_isShowing)
+            {
+                this.Opacity = _targetOpacity;
+            }
         }
 
         public void ApplyTheme(bool isDark)
