@@ -424,7 +424,8 @@ namespace CalculatorInAir
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Margin = new Thickness(0, 0, 0, 12),
                 Visibility = Visibility.Collapsed,
-                Opacity = 0
+                Opacity = 0,
+                IsHitTestVisible = false
             };
             _toastTextBlock = new TextBlock
             {

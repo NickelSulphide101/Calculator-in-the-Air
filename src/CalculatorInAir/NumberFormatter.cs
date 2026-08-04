@@ -20,6 +20,10 @@ namespace CalculatorInAir
                     if (long.TryParse(parts[0], out long intPart))
                     {
                         string formattedInt = intPart.ToString("#,##0", CultureInfo.InvariantCulture);
+                        if (rounded < 0 && !formattedInt.StartsWith("-"))
+                        {
+                            formattedInt = "-" + formattedInt;
+                        }
                         if (parts.Length > 1)
                         {
                             string dec = parts[1].TrimEnd('0');
@@ -60,6 +64,11 @@ namespace CalculatorInAir
 
             long integral = (long)Math.Floor(val);
             long decimalVal = (long)Math.Round((val - integral) * 100);
+            if (decimalVal >= 100)
+            {
+                integral += 1;
+                decimalVal = 0;
+            }
 
             string[] digits = { "零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖" };
             string[] units = { "", "拾", "佰", "仟" };
