@@ -29,6 +29,9 @@ namespace CalculatorInAir
         private ComboBox _languageComboBox = null!;
         private CheckBox _hideOnBlurCheckBox = null!;
         private CheckBox _copyOnEnterCheckBox = null!;
+        private CheckBox _useMonospaceCheckBox = null!;
+        private CheckBox _useThousandsSeparatorCheckBox = null!;
+        private TextBlock _hotkeyWarningText = null!;
         private ComboBox _themeComboBox = null!;
 
         // Opacity Controls
@@ -260,6 +263,8 @@ namespace CalculatorInAir
 
         private FrameworkElement CreateHotkeyControl()
         {
+            var panel = new StackPanel();
+
             _recordButton = new Button
             {
                 Content = _recordedDisplay,
@@ -268,7 +273,20 @@ namespace CalculatorInAir
                 Style = (Style)FindResource("StandardButtonStyle")
             };
             _recordButton.Click += (s, e) => StartRecording();
-            return _recordButton;
+            panel.Children.Add(_recordButton);
+
+            _hotkeyWarningText = new TextBlock
+            {
+                Text = Loc.Get("HotkeySystemConflict"),
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(220, 120, 20)),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0),
+                Visibility = CheckSystemHotkeyConflict(_recordedCtrl, _recordedAlt, _recordedShift, _recordedWin, _recordedVk) ? Visibility.Visible : Visibility.Collapsed
+            };
+            panel.Children.Add(_hotkeyWarningText);
+
+            return panel;
         }
 
         private FrameworkElement CreatePrecisionControl()
@@ -586,12 +604,30 @@ namespace CalculatorInAir
             {
                 Content = Loc.Get("CopyOnEnter"),
                 IsChecked = _settings.CopyOnEnter,
-                Margin = new Thickness(0, 2, 0, 2)
+                Margin = new Thickness(0, 2, 0, 6)
             };
             _copyOnEnterCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
 
+            _useMonospaceCheckBox = new CheckBox
+            {
+                Content = Loc.Get("UseMonospaceFont"),
+                IsChecked = _settings.UseMonospaceFont,
+                Margin = new Thickness(0, 2, 0, 6)
+            };
+            _useMonospaceCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+
+            _useThousandsSeparatorCheckBox = new CheckBox
+            {
+                Content = Loc.Get("UseThousandsSeparator"),
+                IsChecked = _settings.UseThousandsSeparator,
+                Margin = new Thickness(0, 2, 0, 2)
+            };
+            _useThousandsSeparatorCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+
             behaviorPanel.Children.Add(_hideOnBlurCheckBox);
             behaviorPanel.Children.Add(_copyOnEnterCheckBox);
+            behaviorPanel.Children.Add(_useMonospaceCheckBox);
+            behaviorPanel.Children.Add(_useThousandsSeparatorCheckBox);
             return behaviorPanel;
         }
 
@@ -713,6 +749,12 @@ namespace CalculatorInAir
             _recordedDisplay = string.Join(" + ", displayParts);
             _isRecording = false;
             UpdateRecordButtonText();
+
+            if (_hotkeyWarningText != null)
+            {
+                bool isConflict = CheckSystemHotkeyConflict(_recordedCtrl, _recordedAlt, _recordedShift, _recordedWin, _recordedVk);
+                _hotkeyWarningText.Visibility = isConflict ? Visibility.Visible : Visibility.Collapsed;
+            }
         }
 
         private void UpdateRecordButtonText()
@@ -791,6 +833,8 @@ namespace CalculatorInAir
             // 6. Update behavior checkboxes
             _settings.HideOnBlur = _hideOnBlurCheckBox.IsChecked ?? true;
             _settings.CopyOnEnter = _copyOnEnterCheckBox.IsChecked ?? true;
+            _settings.UseMonospaceFont = _useMonospaceCheckBox.IsChecked ?? false;
+            _settings.UseThousandsSeparator = _useThousandsSeparatorCheckBox.IsChecked ?? false;
 
             // Save settings via manager
             SettingsManager.Save(_settings);
@@ -822,6 +866,26 @@ namespace CalculatorInAir
                 RevertAndClose();
             }
             base.OnClosed(e);
+        }
+
+        private static bool CheckSystemHotkeyConflict(bool ctrl, bool alt, bool shift, bool win, int vk)
+        {
+            if (win && !ctrl && !alt && !shift)
+            {
+                if (vk == 0x45 || vk == 0x52 || vk == 0x4C || vk == 0x44 || vk == 0x49 || vk == 0x09)
+                    return true;
+            }
+            if (alt && !ctrl && !win && !shift)
+            {
+                if (vk == 0x73 || vk == 0x09 || vk == 0x1B)
+                    return true;
+            }
+            if (ctrl && shift && !alt && !win && vk == 0x1B)
+                return true;
+            if (ctrl && alt && !shift && !win && vk == 0x2E)
+                return true;
+
+            return false;
         }
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

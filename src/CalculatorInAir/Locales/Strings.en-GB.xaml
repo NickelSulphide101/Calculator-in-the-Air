@@ -40,4 +40,18 @@
     <sys:String x:Key="SizeStandard">Standard (600px)</sys:String>
     <sys:String x:Key="SizeWide">Wide (750px)</sys:String>
     <sys:String x:Key="SizeLarge">Large (900px)</sys:String>
+    <sys:String x:Key="UseMonospaceFont">Use Monospace Font</sys:String>
+    <sys:String x:Key="UseThousandsSeparator">Use Thousands Separator (1,234,567.89)</sys:String>
+    <sys:String x:Key="HotkeySystemConflict">⚠️ This shortcut is a common Windows shortcut and may conflict.</sys:String>
+    <sys:String x:Key="CopiedResult">Copied result: </sys:String>
+    <sys:String x:Key="CopiedFormula">Copied formula &amp; result: </sys:String>
+    <sys:String x:Key="PinToolTip">Pin window (Keep open on focus loss, Ctrl+P)</sys:String>
+    <sys:String x:Key="PinnedToast">📌 Pinned window to top</sys:String>
+    <sys:String x:Key="UnpinnedToast">📌 Unpinned window</sys:String>
+    <sys:String x:Key="ClipboardHint">📋 Clipboard formula detected: {0} (Press Ctrl+V or click to paste)</sys:String>
+    <sys:String x:Key="ShortcutHint">⏎ Copy result  |  Shift+⏎ Copy formula  |  ↑↓ Switch format</sys:String>
+    <sys:String x:Key="FormatStandardLabel">Standard</sys:String>
+    <sys:String x:Key="FormatRawLabel">Raw</sys:String>
+    <sys:String x:Key="FormatWanLabel">10k</sys:String>
+    <sys:String x:Key="FormatRMBLabel">RMB</sys:String>
 </ResourceDictionary>

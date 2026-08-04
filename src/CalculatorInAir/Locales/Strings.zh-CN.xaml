@@ -40,4 +40,18 @@
     <sys:String x:Key="SizeStandard">标准 (600px)</sys:String>
     <sys:String x:Key="SizeWide">宽屏 (750px)</sys:String>
     <sys:String x:Key="SizeLarge">大屏 (900px)</sys:String>
+    <sys:String x:Key="UseMonospaceFont">使用数字等宽字体 (Monospace)</sys:String>
+    <sys:String x:Key="UseThousandsSeparator">使用千位分隔符 (1,234,567.89)</sys:String>
+    <sys:String x:Key="HotkeySystemConflict">⚠️ 该快捷键为 Windows 系统常用快捷键，可能会产生冲突</sys:String>
+    <sys:String x:Key="CopiedResult">已复制结果：</sys:String>
+    <sys:String x:Key="CopiedFormula">已复制算式与结果：</sys:String>
+    <sys:String x:Key="PinToolTip">置顶固定 (离焦不隐藏, Ctrl+P)</sys:String>
+    <sys:String x:Key="PinnedToast">📌 已开启窗口置顶固定</sys:String>
+    <sys:String x:Key="UnpinnedToast">📌 已取消窗口置顶</sys:String>
+    <sys:String x:Key="ClipboardHint">📋 检测到剪贴板算式：{0} (按 Ctrl+V 或点击粘贴)</sys:String>
+    <sys:String x:Key="ShortcutHint">⏎ 复制结果  |  Shift+⏎ 复制算式  |  ↑↓ 切换格式</sys:String>
+    <sys:String x:Key="FormatStandardLabel">标准</sys:String>
+    <sys:String x:Key="FormatRawLabel">纯数字</sys:String>
+    <sys:String x:Key="FormatWanLabel">万元</sys:String>
+    <sys:String x:Key="FormatRMBLabel">大写RMB</sys:String>
 </ResourceDictionary>

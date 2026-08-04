@@ -165,6 +165,34 @@ namespace CalculatorInAir
                     return isZh ? "宽屏 (750px)" : "Wide (750px)";
                 case "SizeLarge":
                     return isZh ? "大屏 (900px)" : "Large (900px)";
+                case "UseMonospaceFont":
+                    return isZh ? "使用数字等宽字体 (Monospace)" : "Use Monospace Font";
+                case "UseThousandsSeparator":
+                    return isZh ? "使用千位分隔符 (1,234,567.89)" : "Use Thousands Separator (1,234,567.89)";
+                case "HotkeySystemConflict":
+                    return isZh ? "⚠️ 该快捷键为 Windows 系统常用快捷键，可能会产生冲突" : "⚠️ This shortcut is a common Windows shortcut and may conflict.";
+                case "CopiedResult":
+                    return isZh ? "已复制结果：" : "Copied result: ";
+                case "CopiedFormula":
+                    return isZh ? "已复制算式与结果：" : "Copied formula & result: ";
+                case "PinToolTip":
+                    return isZh ? "置顶固定 (离焦不隐藏, Ctrl+P)" : "Pin window (Keep open on focus loss, Ctrl+P)";
+                case "PinnedToast":
+                    return isZh ? "📌 已开启窗口置顶固定" : "📌 Pinned window to top";
+                case "UnpinnedToast":
+                    return isZh ? "📌 已取消窗口置顶" : "📌 Unpinned window";
+                case "ClipboardHint":
+                    return isZh ? "📋 检测到剪贴板算式：{0} (按 Ctrl+V 或点击粘贴)" : "📋 Clipboard formula detected: {0} (Press Ctrl+V or click to paste)";
+                case "ShortcutHint":
+                    return isZh ? "⏎ 复制结果  |  Shift+⏎ 复制算式  |  ↑↓ 切换格式" : "⏎ Copy result  |  Shift+⏎ Copy formula  |  ↑↓ Switch format";
+                case "FormatStandardLabel":
+                    return isZh ? "标准" : "Standard";
+                case "FormatRawLabel":
+                    return isZh ? "纯数字" : "Raw";
+                case "FormatWanLabel":
+                    return isZh ? "万元" : "10k";
+                case "FormatRMBLabel":
+                    return isZh ? "大写RMB" : "RMB";
                 default:
                     return key;
             }

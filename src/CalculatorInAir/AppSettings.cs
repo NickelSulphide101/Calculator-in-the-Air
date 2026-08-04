@@ -18,5 +18,7 @@ namespace CalculatorInAir
         public int WindowOpacity { get; set; } = 100; // 30 - 100
         public double WindowWidth { get; set; } = 600.0; // 420 - 900
         public double WindowScale { get; set; } = 1.0; // 0.8 - 1.6
+        public bool UseMonospaceFont { get; set; } = false;
+        public bool UseThousandsSeparator { get; set; } = false;
     }
 }

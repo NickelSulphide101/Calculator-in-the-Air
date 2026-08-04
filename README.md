@@ -12,34 +12,38 @@ It is packaged as a single portable `.exe` file that is **completely self-contai
 
 ### Features
 
-- **Spotlight-like Overlay**:
+- **Spotlight-like Overlay & Fluent Animations**:
   - Centers on the screen 20% from the top (600px width).
   - **Multi-Monitor Aware**: Automatically centers on the active monitor where the mouse cursor is located.
+  - **Windows Fluent Transition Animations**: Ultra-lightweight 120ms Fade & Scale In/Out animations when triggering or hiding.
   - Custom drag support: Drag it anywhere if it blocks your view.
 - **Glassmorphic Design & Theme Adaptability**:
   - Frameless, borderless window utilizing native Windows 11 Acrylic backdrop (`DwmSetWindowAttribute`), with graceful fallbacks for older Windows versions.
   - Soft, hardware-accelerated drop shadows to float above other windows.
   - **Dynamic Theme Adaptation**: Automatically adapts to Windows native light/dark mode settings, or can be overridden manually (powered by WPF XAML ResourceDictionaries).
-- **Real-time Math Evaluation & Conversions**:
+  - **Monospace Font Option**: Choose between standard system fonts and monospace tabular figures (Cascadia Code / Consolas) to eliminate text jitter.
+- **Real-time Math Evaluation & Multi-Format Conversions**:
   - Dynamically tokenizes and parses expressions as you type.
   - **Implicit Multiplication**: Treats expressions like `2pi` or `2(3+4)` naturally as multiplication.
   - **Unit Conversion**: Built-in support for length, weight/mass, and temperature conversions (e.g., `10 m to cm`, `98.6 f in c`).
+  - **Thousands Separator & Format Selector**: Toggle thousands separator (`1,234,567.89`) and use `Up`/`Down` arrow keys on results to cycle formats (Standard, Raw, Ten-thousand `123.46万`, and Chinese Upper-case RMB).
   - **Result History (`ans`)**: Reuse the last calculated result easily with the `ans` constant.
-  - **Input History**: Use the `Up` and `Down` arrow keys to navigate through your previous calculations.
+  - **Input History**: Use the `Up` and `Down` arrow keys to navigate through your previous calculations when result format switching is inactive.
   - **Error Feedback**: Silent error handling while typing, but provides a visual shake animation and red text if you attempt to submit an invalid expression.
-- **Instant Actions**:
+- **Instant Actions & Visual Guidance**:
   - Press `Alt + Space` (default) to toggle the window.
-  - Press `Enter` to copy the calculated result to your clipboard and close the window instantly.
-  - Press `Esc` to hide the window.
-  - Runs in a single instance; launching the app again simply wakes up the running background process.
+  - **Multi-Mode Copying**: Press `Enter` to copy result, or `Shift + Enter` to copy full formula & result (`12 * 8 = 96`) with instant on-screen Toast feedback.
+  - **Smart Esc Key**: Single press Esc clears text; double-press Esc (within 350ms) or Esc on empty input hides the calculator.
+  - **Window Pinning (`Ctrl + P`)**: Pin button on top right to temporarily keep window open on focus loss.
+  - **Smart Clipboard Hint**: Automatically detects valid math formulas on clipboard when waking up, offering one-click paste.
 - **Interactive System Tray**:
   - Custom-drawn tray icon (a beautiful violet-to-blue gradient block with a white `=` sign) built dynamically in memory at runtime.
   - Right-click tray menu to show, open settings, or exit.
 - **Modern Settings Dialog**:
-  - **Interactive Hotkey Recorder**: Click to record any custom global hotkey combination (supports Ctrl, Alt, Shift, Win).
+  - **Interactive Hotkey Recorder**: Click to record any custom global hotkey combination with instant system shortcut conflict warnings (`Win+E`, `Alt+F4`, etc.).
   - **Theme Selection**: Choose between "Follow System (Auto)", "Dark Mode", or "Light Mode".
   - Set calculation precision (Auto or 0 to 10 decimal places).
-  - Toggle behaviors like focus-loss hiding (`Hide when focus is lost`) and Enter-copying.
+  - Toggle behaviors like focus-loss hiding, monospace font, thousands separator, and Enter-copying.
 - **Localization**:
   - Full support for **Simplified Chinese (简体中文)** and **British English (en-GB)** using dynamically loaded XAML dictionaries.
   - Automatically matches the system culture or can be set manually.
@@ -99,74 +103,55 @@ This project uses **GitHub Actions** to build the application automatically. Rol
 
 ### Configuration File Location
 
-Settings are saved in JSON format under the user's local application data folder:
+All user preferences are stored in JSON format at your local app data directory:
 `%LOCALAPPDATA%\CalculatorInAir\settings.json`
 
-If you ever wish to reset settings to default, simply delete this file or click `Exit` in the tray menu and delete it before relaunching.
-
-### Building Locally
-
-If you wish to build the executable from source code, make sure you have the [.NET 10.0 SDK](https://dotnet.microsoft.com/download) installed on your system.
-
-Open a command prompt (cmd/PowerShell) in the project directory and run one of the following commands:
-
-#### Running Unit Tests
-To execute mathematical parser and unit conversion tests:
-```bash
-dotnet test tests/CalculatorInAir.Tests/CalculatorInAir.Tests.csproj
-```
-
-#### Publishing the Executable
-The project is configured to build as a self-contained, single-file executable by default:
-```bash
-dotnet restore src/CalculatorInAir/CalculatorInAir.csproj
-dotnet publish src/CalculatorInAir/CalculatorInAir.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true -o ./publish
-```
-
-The output portable binary `CalculatorInAir.exe` will be located inside the `./publish` directory.
+If you ever wish to reset all settings to default, simply exit the app, delete this file, and run the app again.
 
 ---
 
 ## 简体中文 (Chinese)
 
-`Calculator in the Air`（悬浮计算器）是一款轻量级、现代化、类 macOS Spotlight 的 Windows 悬浮数学计算器。它常驻后台运行，支持通过全局快捷键瞬间呼出，实时计算数学表达式的值，按 Enter 键即可自动复制结果并隐藏，且安静地收纳在系统托盘中。
+`Calculator in the Air (悬浮计算器)` 是一款轻量、现代、macOS Spotlight 风格的 Windows 悬浮数学计算器。它静默驻留在后台，可通过全局快捷键瞬间唤醒，实时计算输入算式的值，按回车一键复制结果，不用时优雅隐藏回系统托盘。
 
-它被打包为单个便携式 `.exe` 文件，并且是**完全自包含 (Self-Contained) 的**——**无需安装**任何框架和运行时，双击即可运行！
+程序打包为独立的便携 `.exe` 文件，**完全自包含 (Self-Contained)**——无需安装，无需预装 .NET 运行时，双击即可运行！
 
-### 功能特性
+### 核心特性
 
-- **类 Spotlight 悬浮窗**：
-  - 屏幕水平居中，垂直方向位于屏幕顶部向下 20% 处（宽度 600px）。
-  - **多显示器感知**：自动在鼠标光标所在的活动显示器中心弹出。
-  - 支持自定义拖拽：如果挡住了视线，可以按住任意空白处将其拖动到任意位置。
-- **现代化玻璃美学与主题适配**：
-  - 无边框设计，在 Windows 11 及以上系统原生支持 Acrylic 亚克力背景（旧系统可优雅降级）。
-  - 带有柔和的、硬件加速的窗口投影，使其立体浮现于其他窗口之上。
-  - **动态主题适配**：完美适配 Windows 原生深色/浅色模式，支持跟随系统自动切换或在设置中手动切换（基于 WPF XAML 资源字典动态加载）。
-- **实时数学计算与单位换算**：
-  - 随着您的输入动态分词并实时解析、计算表达式。
-  - **隐式乘法**：自然支持类似 `2pi` 或 `2(3+4)` 的隐式乘法运算。
-  - **单位换算**：支持长度、质量/重量、温度的便捷换算。语法非常直观，如 `10 m to cm` 或 `98.6 f in c` 等。
-  - **历史计算引用 (`ans`)**：支持通过 `ans` 变量引用上一次的计算结果，方便进行连续计算。
-  - **输入历史记录**：使用 `上 (Up)` 和 `下 (Down)` 方向键可以在之前的计算历史之间快速导航。
-  - **错误反馈**：输入未完成时静默处理错误不打扰输入；但若包含错误的表达式被回车提交，窗口会左右抖动并以红色显示错误提示。
-- **便捷操作**：
-  - 按 `Alt + Space`（默认）即可全局快速呼出/隐藏窗口。
-  - 按 `Enter` 键即可将计算结果复制到剪贴板，并立即隐藏窗口。
-  - 按 `Esc` 键隐藏窗口。
-  - 单实例运行：再次启动应用只会唤醒已在后台运行的进程，不会重复启动。
-- **系统托盘常驻**：
-  - 运行时在内存中动态构建的自定义托盘图标（带白色 `=` 号的蓝紫渐变方块）。
-  - 右击托盘图标可显示菜单，用于快速显示窗口、打开设置或退出程序。
-- **现代化设置面板**：
-  - **交互式快捷键录制器**：点击即可录制任意自定义全局快捷键组合（支持 Ctrl、Alt、Shift、Win 等修饰键）。
-  - **界面主题切换**：支持选择“跟随系统 (Auto)”、“暗黑模式”或“明亮模式”。
-  - 设置计算结果的精度（自动或保留 0 到 10 位小数）。
-  - 切换失去焦点时自动隐藏 (`Hide when focus is lost`) 以及回车自动复制等行为。
-- **双语界面**：
-  - 完整支持**简体中文**与**英国英语 (en-GB)**。基于动态 XAML 语言资源。
-  - 自动匹配系统语言，亦可在设置面板中手动进行切换。
-- **纯绿色免安装**：
+- **类 Spotlight 悬浮窗口与 Fluent 动画**：
+  - 屏幕水平居中、距顶部 20% 位置呈现（标准宽度 600px）。
+  - **多显示器感应**：自动跟随鼠标所在的当前活动显示器居中弹出。
+  - **Fluent 极轻量过渡动画**：唤醒与隐藏时带 120ms 淡入微缩放 (Fade & Scale In/Out) 动画。
+  - 支持拖拽：按住窗口任意位置即可轻松移动。
+- **毛玻璃质感与主题自适应**：
+  - 无边框设计，原生支持 Windows 11 Acrylic 亚克力背景效果（`DwmSetWindowAttribute`），在旧版 Windows 上自动平滑降级。
+  - 软硬件加速阴影，优雅悬浮于其他窗口之上。
+  - **动态主题跟随**：自动适应 Windows 深色/浅色主题，或在设置中手动固定。
+  - **数字等宽字体**：提供 Segoe UI 与 Cascadia Code / Consolas 数字等宽字体选项，杜绝频繁计算时的字符抖动。
+- **实时数学求值与多格式转换**：
+  - 随打随算，实时解析。
+  - **隐式乘法**：自然支持 `2pi` 或 `2(3+4)` 等隐式乘法书写。
+  - **单位换算**：内置长度、重量/质量、温度换算（如 `10 m to cm`, `98.6 f in c`）。
+  - **千位分隔符与大数格式切换**：支持千位分隔符 (`1,234,567.89`)，按键盘 `上下方向键` 在标准、纯数字、**万元 (xx.xx万)** 与 **大写人民币 (RMB)** 格式间实时切换。
+  - **结果历史 (`ans`)**：轻松使用 `ans` 常量引用上一次的计算结果。
+  - **历史记录导航**：在未触发格式切换时按 `Up` / `Down` 键快速浏览历史计算公式。
+  - **错误反馈**：输入时静默处理语法错误，回车时若算式非法则播放震动动画与红色提示。
+- **快捷操作与可视化引导 Toast**：
+  - 按 `Alt + Space`（默认）随时唤醒/隐藏窗口。
+  - **多模式快捷复制**：按 `Enter` 复制计算结果，按 `Shift + Enter` 复制完整算式与结果 (`12 * 8 = 96`)，伴有 Toast 轻提示。
+  - **Esc 分级逻辑**：单击 Esc 清空输入框；350ms 内连击双击 Esc 或空框时隐藏窗口。
+  - **窗口置顶固定 (`Ctrl + P`)**：右上角一键图钉，固定时临时禁用离焦隐藏，方便连续多笔对照计算。
+  - **剪贴板算式智能提醒**：唤醒时检测到剪贴板包含合法公式自动弹出轻提示，支持一键粘贴。
+- **交互式系统托盘**：
+  - 运行时动态绘制系统托盘图标（紫色到蓝色渐变背景与白色 `=` 符号）。
+  - 右键托盘菜单支持显示、打开设置或退出。
+- **现代设置对话框**：
+  - **交互式快捷键录制**：支持录制任意全局快捷键，录制 `Win+E`, `Alt+F4` 等系统快捷键时实时给出风险提示。
+  - **主题与精度控制**：自由选择主题与保留小数位数 (自动或 0~10 位)。
+  - 丰富行为开关：失去焦点隐藏、数字等宽字体、千位分隔符等。
+- **多语言支持**：
+  - 原生支持 **简体中文** 与 **英国英语 (en-GB)**。
+- **便携开箱即用**：
   - 基于 .NET 10.0 WPF 构建。
   - 打包为开启 `ReadyToRun` 的**自包含 (Self-Contained)** 独立单 `.exe` 文件。程序已内嵌所需的 .NET 运行时，在支持的 x64 Windows 机器上开箱即用。
 
@@ -226,26 +211,5 @@ The output portable binary `CalculatorInAir.exe` will be located inside the `./p
 `%LOCALAPPDATA%\CalculatorInAir\settings.json`
 
 如果您想将所有设置重置为默认值，只需退出程序，删除该文件，然后重新运行即可。
-
-### 本地编译与测试
-
-如果您希望从源码编译或测试该可执行文件，请确保系统已安装 [.NET 10.0 SDK](https://dotnet.microsoft.com/download)。
-
-在项目根目录下打开命令行（cmd/PowerShell）并运行以下命令之一：
-
-#### 运行测试
-若要运行解析器和单位换算的单元测试：
-```bash
-dotnet test tests/CalculatorInAir.Tests/CalculatorInAir.Tests.csproj
-```
-
-#### 发布可执行程序
-项目默认配置为生成自包含的单文件应用：
-```bash
-dotnet restore src/CalculatorInAir/CalculatorInAir.csproj
-dotnet publish src/CalculatorInAir/CalculatorInAir.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true -o ./publish
-```
-
-输出的绿色便携二进制文件 `CalculatorInAir.exe` 将被保存在 `./publish` 目录下。
 
 ---
