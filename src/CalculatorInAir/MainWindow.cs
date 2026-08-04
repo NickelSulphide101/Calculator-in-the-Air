@@ -36,6 +36,7 @@ namespace CalculatorInAir
         // Settings & State
         private readonly AppSettings _settings;
         private bool _isSettingsWindowOpen = false;
+        private bool _isShowing = false;
 
         // UI Controls
         private Border _mainBorder = null!;
@@ -86,6 +87,14 @@ namespace CalculatorInAir
 
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_SHOW = 5;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -448,13 +457,25 @@ namespace CalculatorInAir
             }
         }
 
+        private void ForceForeground()
+        {
+            if (_hwnd != IntPtr.Zero)
+            {
+                ShowWindow(_hwnd, SW_SHOW);
+                SetForegroundWindow(_hwnd);
+            }
+        }
+
         public void ShowWindow()
         {
+            _isShowing = true;
+
             // Pre-set invisible state to prevent visual flash before positioning
             this.Opacity = 0;
             _translateTransform.Y = -15;
 
             this.Show();
+            ForceForeground();
             this.Activate();
 
             // Position after Show() so PresentationSource is available for accurate DPI scaling
@@ -472,6 +493,11 @@ namespace CalculatorInAir
                 To = 1,
                 Duration = TimeSpan.FromMilliseconds(180),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            fadeIn.Completed += (s, e) =>
+            {
+                _isShowing = false;
             };
 
             var slideDown = new DoubleAnimation
@@ -751,6 +777,8 @@ namespace CalculatorInAir
 
         private void MainWindow_Deactivated(object? sender, EventArgs e)
         {
+            if (_isShowing) return;
+
             if (_settings.HideOnBlur && !_isSettingsWindowOpen)
             {
                 HideWindow();

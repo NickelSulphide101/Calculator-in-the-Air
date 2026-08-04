@@ -50,7 +50,7 @@ namespace CalculatorInAir
             }
 
             string filename = active == Language.zh_CN ? "Strings.zh-CN.xaml" : "Strings.en-GB.xaml";
-            var uri = new Uri($"/CalculatorInAir;component/Locales/{filename}", UriKind.Relative);
+            var uri = new Uri($"pack://application:,,,/Locales/{filename}", UriKind.Absolute);
 
             if (System.Windows.Application.Current == null) return;
 

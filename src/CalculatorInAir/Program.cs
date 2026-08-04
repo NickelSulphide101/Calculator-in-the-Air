@@ -24,6 +24,9 @@ namespace CalculatorInAir
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        [DllImport("user32.dll")]
+        private static extern bool AllowSetForegroundWindow(int dwProcessId);
+
         private const string MutexName = "Local\\CalculatorInTheAirMutex-984F-4B8A-A2E4";
         private const int WM_USER_WAKEUP = 0x0400 + 101;
 
@@ -45,7 +48,15 @@ namespace CalculatorInAir
             };
 
             // Try to acquire the system mutex
-            _mutex = new Mutex(true, MutexName, out bool isNewInstance);
+            bool isNewInstance = false;
+            try
+            {
+                _mutex = new Mutex(true, MutexName, out isNewInstance);
+            }
+            catch (AbandonedMutexException)
+            {
+                isNewInstance = true;
+            }
 
             if (!isNewInstance)
             {
@@ -60,6 +71,7 @@ namespace CalculatorInAir
                     {
                         if (p.Id != currentPid)
                         {
+                            AllowSetForegroundWindow(p.Id);
                             EnumWindows((hWnd, lParam) =>
                             {
                                 GetWindowThreadProcessId(hWnd, out uint pid);
@@ -78,6 +90,8 @@ namespace CalculatorInAir
                         IntPtr hWnd = FindWindow(null, "Calculator in the Air");
                         if (hWnd != IntPtr.Zero)
                         {
+                            GetWindowThreadProcessId(hWnd, out uint pid);
+                            AllowSetForegroundWindow((int)pid);
                             PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
                         }
                     }

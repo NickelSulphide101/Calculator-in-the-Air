@@ -25,7 +25,7 @@ namespace CalculatorInAir
             // 0. Load shared styles resource dictionary
             try
             {
-                var stylesDict = new ResourceDictionary { Source = new Uri("/CalculatorInAir;component/Themes/Styles.xaml", UriKind.Relative) };
+                var stylesDict = new ResourceDictionary { Source = new Uri("pack://application:,,,/Themes/Styles.xaml", UriKind.Absolute) };
                 Resources.MergedDictionaries.Add(stylesDict);
             }
             catch (Exception ex)
@@ -250,7 +250,7 @@ namespace CalculatorInAir
         private void LoadThemeResource(bool isDark)
         {
             string filename = isDark ? "DarkTheme.xaml" : "LightTheme.xaml";
-            var uri = new Uri($"/CalculatorInAir;component/Themes/{filename}", UriKind.Relative);
+            var uri = new Uri($"pack://application:,,,/Themes/{filename}", UriKind.Absolute);
             
             var merged = Resources.MergedDictionaries;
             ResourceDictionary? oldDict = null;
