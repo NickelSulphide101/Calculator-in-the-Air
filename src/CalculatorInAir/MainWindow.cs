@@ -12,6 +12,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 
 // Disambiguate types between WPF and WinForms/System.Drawing namespaces
+using Button = System.Windows.Controls.Button;
 using TextBox = System.Windows.Controls.TextBox;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Color = System.Windows.Media.Color;
