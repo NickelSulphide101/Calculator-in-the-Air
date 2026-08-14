@@ -54,4 +54,27 @@
     <sys:String x:Key="FormatRawLabel">Raw</sys:String>
     <sys:String x:Key="FormatWanLabel">10k</sys:String>
     <sys:String x:Key="FormatRMBLabel">RMB</sys:String>
+    <sys:String x:Key="IconColorSetting">Icon &amp; Theme Color:</sys:String>
+    <sys:String x:Key="IconColorDefault">Aurora (Default)</sys:String>
+    <sys:String x:Key="IconColorSunset">Sunset Glow</sys:String>
+    <sys:String x:Key="IconColorOcean">Ocean Mist</sys:String>
+    <sys:String x:Key="IconColorPine">Pine Jade</sys:String>
+    <sys:String x:Key="IconColorCosmic">Cosmic Twilight</sys:String>
+    <sys:String x:Key="IconColorAmber">Warm Amber</sys:String>
+    <sys:String x:Key="IconColorSakura">Smoky Sakura</sys:String>
+    <sys:String x:Key="IconColorLavender">Muted Lavender</sys:String>
+    <sys:String x:Key="IconColorSlate">Slate Blue</sys:String>
+    <sys:String x:Key="IconColorSage">Sage Green</sys:String>
+    <sys:String x:Key="IconColorTerracotta">Terracotta Clay</sys:String>
+    <sys:String x:Key="IconColorDustyRose">Dusty Rose</sys:String>
+    <sys:String x:Key="IconColorTeal">Nordic Teal</sys:String>
+    <sys:String x:Key="IconColorTitanium">Warm Titanium</sys:String>
+    <sys:String x:Key="IconColorGraphite">Graphite</sys:String>
+    <sys:String x:Key="IconColorCustom">Custom...</sys:String>
+    <sys:String x:Key="CustomColorStart">Start Color</sys:String>
+    <sys:String x:Key="CustomColorEnd">End Color</sys:String>
+    <sys:String x:Key="CustomColorGradientMode">Enable Gradient</sys:String>
+    <sys:String x:Key="CustomColorQuickPalette">Color Palette:</sys:String>
+    <sys:String x:Key="GradientSection">Gradients</sys:String>
+    <sys:String x:Key="SolidSection">Muted Solids</sys:String>
 </ResourceDictionary>

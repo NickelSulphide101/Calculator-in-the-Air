@@ -9,13 +9,18 @@ using System.Windows.Media;
 using Button = System.Windows.Controls.Button;
 using ComboBox = System.Windows.Controls.ComboBox;
 using CheckBox = System.Windows.Controls.CheckBox;
+using TextBox = System.Windows.Controls.TextBox;
+using WrapPanel = System.Windows.Controls.WrapPanel;
 using Color = System.Windows.Media.Color;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Brushes = System.Windows.Media.Brushes;
 using FontFamily = System.Windows.Media.FontFamily;
 using Orientation = System.Windows.Controls.Orientation;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using VerticalAlignment = System.Windows.VerticalAlignment;
 using Cursors = System.Windows.Input.Cursors;
+using Path = System.Windows.Shapes.Path;
+using Ellipse = System.Windows.Shapes.Ellipse;
 
 namespace CalculatorInAir
 {
@@ -34,6 +39,27 @@ namespace CalculatorInAir
         private CheckBox _useThousandsSeparatorCheckBox = null!;
         private TextBlock _hotkeyWarningText = null!;
         private ComboBox _themeComboBox = null!;
+
+        // Icon & Theme Color Controls
+        private string _originalIconColorPreset = "Default";
+        private string _originalIconCustomColor1 = "#8E7DBE";
+        private string _originalIconCustomColor2 = "#5C82A6";
+        private bool _originalIconCustomIsGradient = true;
+
+        private string _currentIconColorPreset = "Default";
+        private string _currentIconCustomColor1 = "#8E7DBE";
+        private string _currentIconCustomColor2 = "#5C82A6";
+        private bool _currentIconCustomIsGradient = true;
+
+        private readonly Dictionary<string, Button> _colorPresetButtons = new Dictionary<string, Button>();
+        private Border _customColorCard = null!;
+        private TextBox _color1Input = null!;
+        private TextBox _color2Input = null!;
+        private Border _color1PreviewBox = null!;
+        private Border _color2PreviewBox = null!;
+        private CheckBox _gradientModeCheckBox = null!;
+        private Path _miniIconPreview = null!;
+        private int _activeCustomColorIndex = 1; // 1 or 2
 
         // Opacity Controls
         private Slider _opacitySlider = null!;
@@ -92,9 +118,19 @@ namespace CalculatorInAir
             _originalWidthSetting = settings.WindowWidth;
             _originalScaleSetting = settings.WindowScale;
 
+            _originalIconColorPreset = settings.IconColorPreset ?? "Default";
+            _originalIconCustomColor1 = settings.IconCustomColor1 ?? "#8E7DBE";
+            _originalIconCustomColor2 = settings.IconCustomColor2 ?? "#5C82A6";
+            _originalIconCustomIsGradient = settings.IconCustomIsGradient;
+
             _currentOpacity = settings.WindowOpacity;
             _currentWidth = settings.WindowWidth;
             _currentScale = settings.WindowScale;
+
+            _currentIconColorPreset = _originalIconColorPreset;
+            _currentIconCustomColor1 = _originalIconCustomColor1;
+            _currentIconCustomColor2 = _originalIconCustomColor2;
+            _currentIconCustomIsGradient = _originalIconCustomIsGradient;
 
             // Determine active theme
             bool isDark = true;
@@ -122,8 +158,8 @@ namespace CalculatorInAir
         private void InitializeUI()
         {
             Title = Loc.Get("SettingsTitle");
-            Width = 500;
-            Height = 650;
+            Width = 520;
+            Height = 680;
             ResizeMode = ResizeMode.NoResize;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Arial");
@@ -173,13 +209,16 @@ namespace CalculatorInAir
             // 2.4 Theme Row
             contentStack.Children.Add(CreateSettingRow(Loc.Get("ThemeSetting"), CreateThemeControl()));
 
-            // 2.5 Opacity Row (Scheme A - Preset Pills + Fluid Slider + Translucent Preview)
+            // 2.5 Icon Color Row (Rich Presets + Muted Solids + Custom Picker)
+            contentStack.Children.Add(CreateSettingRow(Loc.Get("IconColorSetting"), CreateIconColorControl(), isTopAligned: true));
+
+            // 2.6 Opacity Row (Preset Pills + Fluid Slider + Translucent Preview)
             contentStack.Children.Add(CreateSettingRow(Loc.Get("WindowOpacitySetting"), CreateOpacityControl(), isTopAligned: true));
 
-            // 2.6 Window Size & Font Scaling Row
+            // 2.7 Window Size & Font Scaling Row
             contentStack.Children.Add(CreateSettingRow(Loc.Get("WindowSizeSetting"), CreateSizeAndScaleControl(), isTopAligned: true));
 
-            // 2.7 Behaviors Row
+            // 2.8 Behaviors Row
             contentStack.Children.Add(CreateSettingRow(Loc.Get("Behavior"), CreateBehaviorControl(), isTopAligned: true));
 
             scrollViewer.Content = contentStack;
@@ -351,6 +390,462 @@ namespace CalculatorInAir
 
             _themeComboBox.SelectionChanged += ThemeComboBox_SelectionChanged;
             return _themeComboBox;
+        }
+
+        private FrameworkElement CreateIconColorControl()
+        {
+            var panel = new StackPanel();
+
+            // 1. Gradients Section
+            var gradLabel = new TextBlock
+            {
+                Text = Loc.Get("GradientSection"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 2, 0, 4)
+            };
+            gradLabel.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+            _labels.Add(gradLabel);
+            panel.Children.Add(gradLabel);
+
+            var gradWrap = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+            foreach (var preset in IconColorHelper.GradientPresets)
+            {
+                var pill = CreateColorPillButton(preset);
+                _colorPresetButtons[preset.Id] = pill;
+                gradWrap.Children.Add(pill);
+            }
+            panel.Children.Add(gradWrap);
+
+            // 2. Muted Solids Section
+            var solidLabel = new TextBlock
+            {
+                Text = Loc.Get("SolidSection"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 4, 0, 4)
+            };
+            solidLabel.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+            _labels.Add(solidLabel);
+            panel.Children.Add(solidLabel);
+
+            var solidWrap = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+            foreach (var preset in IconColorHelper.SolidPresets)
+            {
+                var pill = CreateColorPillButton(preset);
+                _colorPresetButtons[preset.Id] = pill;
+                solidWrap.Children.Add(pill);
+            }
+
+            // Custom Button
+            var customPill = CreateCustomPillButton();
+            _colorPresetButtons["Custom"] = customPill;
+            solidWrap.Children.Add(customPill);
+
+            panel.Children.Add(solidWrap);
+
+            // 3. Custom Color Configuration Card
+            _customColorCard = CreateCustomColorCard();
+            panel.Children.Add(_customColorCard);
+
+            UpdateColorPillsHighlight();
+            UpdateCustomCardVisibility();
+
+            return panel;
+        }
+
+        private Button CreateColorPillButton(ColorPresetInfo preset)
+        {
+            var btn = new Button
+            {
+                Height = 28,
+                Padding = new Thickness(6, 0, 10, 0),
+                Margin = new Thickness(0, 0, 6, 6),
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource("StandardButtonStyle")
+            };
+
+            var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            
+            // Dot swatch
+            var dot = new Ellipse
+            {
+                Width = 12,
+                Height = 12,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Fill = GetPresetBrush(preset)
+            };
+
+            var text = new TextBlock
+            {
+                Text = Loc.Get(preset.NameKey),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            stack.Children.Add(dot);
+            stack.Children.Add(text);
+            btn.Content = stack;
+
+            btn.Click += (s, e) =>
+            {
+                _currentIconColorPreset = preset.Id;
+                UpdateColorPillsHighlight();
+                UpdateCustomCardVisibility();
+                ApplyLiveColorPreview();
+            };
+
+            return btn;
+        }
+
+        private Button CreateCustomPillButton()
+        {
+            var btn = new Button
+            {
+                Height = 28,
+                Padding = new Thickness(6, 0, 10, 0),
+                Margin = new Thickness(0, 0, 6, 6),
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource("StandardButtonStyle")
+            };
+
+            var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            
+            // Icon swatch for custom
+            var dot = new Ellipse
+            {
+                Width = 12,
+                Height = 12,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Fill = new LinearGradientBrush(
+                    Color.FromRgb(142, 125, 190),
+                    Color.FromRgb(92, 130, 166),
+                    45)
+            };
+
+            var text = new TextBlock
+            {
+                Text = Loc.Get("IconColorCustom"),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            stack.Children.Add(dot);
+            stack.Children.Add(text);
+            btn.Content = stack;
+
+            btn.Click += (s, e) =>
+            {
+                _currentIconColorPreset = "Custom";
+                UpdateColorPillsHighlight();
+                UpdateCustomCardVisibility();
+                UpdateCustomMiniPreview();
+                ApplyLiveColorPreview();
+            };
+
+            return btn;
+        }
+
+        private Border CreateCustomColorCard()
+        {
+            var card = new Border
+            {
+                Background = new SolidColorBrush(_isDarkTheme ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(15, 0, 0, 0)),
+                BorderBrush = new SolidColorBrush(_isDarkTheme ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(25, 0, 0, 0)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 4, 0, 6),
+                Visibility = Visibility.Collapsed
+            };
+
+            var stack = new StackPanel();
+
+            // Header with mini icon preview
+            var headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
+
+            var title = new TextBlock
+            {
+                Text = Loc.Get("CustomColorQuickPalette"),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            title.SetResourceReference(TextBlock.ForegroundProperty, "SettingsForegroundBrush");
+            Grid.SetColumn(title, 0);
+            headerGrid.Children.Add(title);
+
+            _miniIconPreview = new Path
+            {
+                Data = Geometry.Parse("M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5zm3 4h2V7H7v2zm4 0h2V7h-2v2zm4 0h2V7h-2v2zm-8 4h2v-2H7v2zm4 0h2v-2h-2v2zm4 0h2v-2h-2v2zm-8 4h2v-2H7v2zm4 4h6v-2h-6v2z"),
+                Stretch = Stretch.Uniform,
+                Width = 20,
+                Height = 20,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            Grid.SetColumn(_miniIconPreview, 1);
+            headerGrid.Children.Add(_miniIconPreview);
+            stack.Children.Add(headerGrid);
+
+            // Palette Swatches Row
+            var swatchesWrap = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+            foreach (var hex in IconColorHelper.QuickSwatches)
+            {
+                var swatchDot = new Border
+                {
+                    Width = 18,
+                    Height = 18,
+                    CornerRadius = new CornerRadius(9),
+                    Margin = new Thickness(0, 0, 6, 4),
+                    Background = new SolidColorBrush(IconColorHelper.ParseHexColor(hex, Color.FromRgb(140, 140, 140))),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
+                    BorderThickness = new Thickness(1),
+                    Cursor = Cursors.Hand,
+                    ToolTip = hex
+                };
+
+                string targetHex = hex;
+                swatchDot.MouseLeftButtonDown += (s, e) =>
+                {
+                    if (_activeCustomColorIndex == 1 || !_currentIconCustomIsGradient)
+                    {
+                        _currentIconCustomColor1 = targetHex;
+                        _color1Input.Text = targetHex;
+                    }
+                    else
+                    {
+                        _currentIconCustomColor2 = targetHex;
+                        _color2Input.Text = targetHex;
+                    }
+                    UpdateCustomMiniPreview();
+                    ApplyLiveColorPreview();
+                };
+
+                swatchesWrap.Children.Add(swatchDot);
+            }
+            stack.Children.Add(swatchesWrap);
+
+            // Inputs Row
+            var inputsGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+            inputsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inputsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+            inputsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            // Color 1
+            var col1Stack = new StackPanel();
+            var col1Label = new TextBlock { Text = Loc.Get("CustomColorStart"), FontSize = 10, Margin = new Thickness(0, 0, 0, 2) };
+            col1Label.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+            col1Stack.Children.Add(col1Label);
+
+            var col1Box = new Grid();
+            col1Box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+            col1Box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            _color1PreviewBox = new Border
+            {
+                Width = 14,
+                Height = 14,
+                CornerRadius = new CornerRadius(3),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
+                BorderThickness = new Thickness(1)
+            };
+            Grid.SetColumn(_color1PreviewBox, 0);
+            col1Box.Children.Add(_color1PreviewBox);
+
+            _color1Input = new TextBox
+            {
+                Text = _currentIconCustomColor1,
+                Height = 24,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            _color1Input.GotFocus += (s, e) => _activeCustomColorIndex = 1;
+            _color1Input.TextChanged += (s, e) =>
+            {
+                if (_isInitializing) return;
+                _currentIconCustomColor1 = _color1Input.Text;
+                UpdateCustomMiniPreview();
+                ApplyLiveColorPreview();
+            };
+            Grid.SetColumn(_color1Input, 1);
+            col1Box.Children.Add(_color1Input);
+            col1Stack.Children.Add(col1Box);
+            Grid.SetColumn(col1Stack, 0);
+            inputsGrid.Children.Add(col1Stack);
+
+            // Color 2
+            var col2Stack = new StackPanel();
+            var col2Label = new TextBlock { Text = Loc.Get("CustomColorEnd"), FontSize = 10, Margin = new Thickness(0, 0, 0, 2) };
+            col2Label.SetResourceReference(TextBlock.ForegroundProperty, "SettingsLabelForegroundBrush");
+            col2Stack.Children.Add(col2Label);
+
+            var col2Box = new Grid();
+            col2Box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+            col2Box.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            _color2PreviewBox = new Border
+            {
+                Width = 14,
+                Height = 14,
+                CornerRadius = new CornerRadius(3),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
+                BorderThickness = new Thickness(1)
+            };
+            Grid.SetColumn(_color2PreviewBox, 0);
+            col2Box.Children.Add(_color2PreviewBox);
+
+            _color2Input = new TextBox
+            {
+                Text = _currentIconCustomColor2,
+                Height = 24,
+                FontSize = 11,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            _color2Input.GotFocus += (s, e) => _activeCustomColorIndex = 2;
+            _color2Input.TextChanged += (s, e) =>
+            {
+                if (_isInitializing) return;
+                _currentIconCustomColor2 = _color2Input.Text;
+                UpdateCustomMiniPreview();
+                ApplyLiveColorPreview();
+            };
+            Grid.SetColumn(_color2Input, 1);
+            col2Box.Children.Add(_color2Input);
+            col2Stack.Children.Add(col2Box);
+            Grid.SetColumn(col2Stack, 2);
+            inputsGrid.Children.Add(col2Stack);
+
+            stack.Children.Add(inputsGrid);
+
+            // Gradient mode toggle
+            _gradientModeCheckBox = new CheckBox
+            {
+                Content = Loc.Get("CustomColorGradientMode"),
+                IsChecked = _currentIconCustomIsGradient,
+                FontSize = 11,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            _gradientModeCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+            _gradientModeCheckBox.Checked += (s, e) =>
+            {
+                _currentIconCustomIsGradient = true;
+                col2Stack.Opacity = 1.0;
+                _color2Input.IsEnabled = true;
+                UpdateCustomMiniPreview();
+                ApplyLiveColorPreview();
+            };
+            _gradientModeCheckBox.Unchecked += (s, e) =>
+            {
+                _currentIconCustomIsGradient = false;
+                col2Stack.Opacity = 0.4;
+                _color2Input.IsEnabled = false;
+                UpdateCustomMiniPreview();
+                ApplyLiveColorPreview();
+            };
+            stack.Children.Add(_gradientModeCheckBox);
+
+            card.Child = stack;
+            return card;
+        }
+
+        private Brush GetPresetBrush(ColorPresetInfo preset)
+        {
+            string start = _isDarkTheme ? preset.DarkStartHex : preset.LightStartHex;
+            string end = _isDarkTheme ? preset.DarkEndHex : preset.LightEndHex;
+            var c1 = IconColorHelper.ParseHexColor(start, Color.FromRgb(124, 58, 237));
+            var c2 = preset.IsGradient ? IconColorHelper.ParseHexColor(end, Color.FromRgb(13, 148, 136)) : c1;
+
+            if (preset.IsGradient)
+            {
+                var b = new LinearGradientBrush(c1, c2, 45);
+                b.Freeze();
+                return b;
+            }
+            else
+            {
+                var b = new SolidColorBrush(c1);
+                b.Freeze();
+                return b;
+            }
+        }
+
+        private void UpdateColorPillsAppearance()
+        {
+            foreach (var kvp in _colorPresetButtons)
+            {
+                if (kvp.Key == "Custom") continue;
+                var preset = IconColorHelper.FindPreset(kvp.Key);
+                if (preset != null && kvp.Value.Content is StackPanel sp && sp.Children.Count > 0 && sp.Children[0] is Ellipse dot)
+                {
+                    dot.Fill = GetPresetBrush(preset);
+                }
+            }
+        }
+
+        private void UpdateColorPillsHighlight()
+        {
+            foreach (var kvp in _colorPresetButtons)
+            {
+                bool isSel = string.Equals(kvp.Key, _currentIconColorPreset, StringComparison.OrdinalIgnoreCase);
+                kvp.Value.Style = (Style)FindResource(isSel ? "AccentButtonStyle" : "StandardButtonStyle");
+            }
+        }
+
+        private void UpdateCustomCardVisibility()
+        {
+            if (_customColorCard != null)
+            {
+                _customColorCard.Visibility = string.Equals(_currentIconColorPreset, "Custom", StringComparison.OrdinalIgnoreCase)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateCustomMiniPreview()
+        {
+            if (_miniIconPreview == null) return;
+
+            var c1 = IconColorHelper.ParseHexColor(_currentIconCustomColor1, Color.FromRgb(142, 125, 190));
+            var c2 = _currentIconCustomIsGradient
+                ? IconColorHelper.ParseHexColor(_currentIconCustomColor2, Color.FromRgb(92, 130, 166))
+                : c1;
+
+            if (_color1PreviewBox != null) _color1PreviewBox.Background = new SolidColorBrush(c1);
+            if (_color2PreviewBox != null) _color2PreviewBox.Background = new SolidColorBrush(c2);
+
+            if (_currentIconCustomIsGradient)
+            {
+                var b = new LinearGradientBrush(c1, c2, 45);
+                _miniIconPreview.Fill = b;
+            }
+            else
+            {
+                _miniIconPreview.Fill = new SolidColorBrush(c1);
+            }
+        }
+
+        private void ApplyLiveColorPreview()
+        {
+            var temp = new AppSettings
+            {
+                Theme = _settings.Theme,
+                IconColorPreset = _currentIconColorPreset,
+                IconCustomColor1 = _currentIconCustomColor1,
+                IconCustomColor2 = _currentIconCustomColor2,
+                IconCustomIsGradient = _currentIconCustomIsGradient
+            };
+            (System.Windows.Application.Current as App)?.ApplyLiveIconColorPreview(temp);
         }
 
         private FrameworkElement CreateOpacityControl()
@@ -826,12 +1321,18 @@ namespace CalculatorInAir
                 selectedTheme = "Light";
             _settings.Theme = selectedTheme;
 
-            // 5. Update Opacity, Width & Scale
+            // 5. Update Icon & Theme Color
+            _settings.IconColorPreset = _currentIconColorPreset;
+            _settings.IconCustomColor1 = _currentIconCustomColor1;
+            _settings.IconCustomColor2 = _currentIconCustomColor2;
+            _settings.IconCustomIsGradient = _currentIconCustomIsGradient;
+
+            // 6. Update Opacity, Width & Scale
             _settings.WindowOpacity = _currentOpacity;
             _settings.WindowWidth = _currentWidth;
             _settings.WindowScale = _currentScale;
 
-            // 6. Update behavior checkboxes
+            // 7. Update behavior checkboxes
             _settings.HideOnBlur = _hideOnBlurCheckBox.IsChecked ?? true;
             _settings.CopyOnEnter = _copyOnEnterCheckBox.IsChecked ?? true;
             _settings.UseMonospaceFont = _useMonospaceCheckBox.IsChecked ?? false;
@@ -851,6 +1352,8 @@ namespace CalculatorInAir
         public void ApplyTheme(bool isDark)
         {
             _isDarkTheme = isDark;
+            UpdateColorPillsAppearance();
+            UpdateCustomMiniPreview();
         }
 
         private void RevertAndClose()
@@ -859,6 +1362,10 @@ namespace CalculatorInAir
             _settings.WindowOpacity = _originalOpacitySetting;
             _settings.WindowWidth = _originalWidthSetting;
             _settings.WindowScale = _originalScaleSetting;
+            _settings.IconColorPreset = _originalIconColorPreset;
+            _settings.IconCustomColor1 = _originalIconCustomColor1;
+            _settings.IconCustomColor2 = _originalIconCustomColor2;
+            _settings.IconCustomIsGradient = _originalIconCustomIsGradient;
 
             _mainWindow?.ApplyWindowLayout(_originalWidthSetting, _originalScaleSetting, _originalOpacitySetting);
             (System.Windows.Application.Current as App)?.ApplyTheme();

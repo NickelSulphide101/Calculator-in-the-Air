@@ -193,6 +193,52 @@ namespace CalculatorInAir
                     return isZh ? "万元" : "10k";
                 case "FormatRMBLabel":
                     return isZh ? "大写RMB" : "RMB";
+                case "IconColorSetting":
+                    return isZh ? "图标与主题配色：" : "Icon & Theme Color:";
+                case "IconColorDefault":
+                    return isZh ? "极光紫青 (默认)" : "Aurora (Default)";
+                case "IconColorSunset":
+                    return isZh ? "落日余晖" : "Sunset Glow";
+                case "IconColorOcean":
+                    return isZh ? "海雾琉璃" : "Ocean Mist";
+                case "IconColorPine":
+                    return isZh ? "松石苍翠" : "Pine Jade";
+                case "IconColorCosmic":
+                    return isZh ? "星云暮夜" : "Cosmic Twilight";
+                case "IconColorAmber":
+                    return isZh ? "暖茶琥珀" : "Warm Amber";
+                case "IconColorSakura":
+                    return isZh ? "烟粉初樱" : "Smoky Sakura";
+                case "IconColorLavender":
+                    return isZh ? "鸢尾灰紫" : "Muted Lavender";
+                case "IconColorSlate":
+                    return isZh ? "雾霾静蓝" : "Slate Blue";
+                case "IconColorSage":
+                    return isZh ? "鼠尾草绿" : "Sage Green";
+                case "IconColorTerracotta":
+                    return isZh ? "复古陶土" : "Terracotta Clay";
+                case "IconColorDustyRose":
+                    return isZh ? "干枯粉黛" : "Dusty Rose";
+                case "IconColorTeal":
+                    return isZh ? "冷杉墨青" : "Nordic Teal";
+                case "IconColorTitanium":
+                    return isZh ? "钛金暖灰" : "Warm Titanium";
+                case "IconColorGraphite":
+                    return isZh ? "石墨冷灰" : "Graphite";
+                case "IconColorCustom":
+                    return isZh ? "自定义..." : "Custom...";
+                case "CustomColorStart":
+                    return isZh ? "起始色 (Hex)" : "Start Color";
+                case "CustomColorEnd":
+                    return isZh ? "结束色 (Hex)" : "End Color";
+                case "CustomColorGradientMode":
+                    return isZh ? "启用双色渐变" : "Enable Gradient";
+                case "CustomColorQuickPalette":
+                    return isZh ? "雅致调色板：" : "Elegant Palette:";
+                case "GradientSection":
+                    return isZh ? "柔和渐变" : "Gradients";
+                case "SolidSection":
+                    return isZh ? "雅致纯色" : "Muted Solids";
                 default:
                     return key;
             }

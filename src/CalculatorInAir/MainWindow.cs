@@ -679,11 +679,13 @@ namespace CalculatorInAir
             if (_pinIcon == null) return;
             if (_isPinned)
             {
-                _pinIcon.Fill = new SolidColorBrush(Color.FromRgb(124, 76, 237));
+                _pinIcon.SetResourceReference(Path.FillProperty, "CalculatorIconBrush");
+                _pinIcon.Opacity = 1.0;
             }
             else
             {
-                _pinIcon.SetResourceReference(Path.FillProperty, "CalculatorIconBrush");
+                _pinIcon.SetResourceReference(Path.FillProperty, "PlaceholderForegroundBrush");
+                _pinIcon.Opacity = 0.5;
             }
         }
 

@@ -39,9 +39,12 @@ It is packaged as a single portable `.exe` file that is **completely self-contai
 - **Interactive System Tray**:
   - Custom-drawn tray icon (a beautiful violet-to-blue gradient block with a white `=` sign) built dynamically in memory at runtime.
   - Right-click tray menu to show, open settings, or exit.
-- **Modern Settings Dialog**:
+- **Modern Settings Dialog & Rich Personalization**:
+  - **Icon & Theme Color Personalization**: Choose from tasteful soft gradients (*Aurora*, *Sunset Glow*, *Ocean Mist*, *Pine Jade*, *Cosmic Twilight*, *Warm Amber*, *Smoky Sakura*), low-saturation muted solid palettes (*Muted Lavender*, *Slate Blue*, *Sage Green*, *Terracotta Clay*, *Dusty Rose*, *Nordic Teal*, *Warm Titanium*, *Graphite*), or create your own custom gradient/solid color with real-time live preview.
+  - **Synchronized Tray & Visual Elements**: System tray icon, window icon, and accents dynamically harmonize with your chosen color scheme.
   - **Interactive Hotkey Recorder**: Click to record any custom global hotkey combination with instant system shortcut conflict warnings (`Win+E`, `Alt+F4`, etc.).
   - **Theme Selection**: Choose between "Follow System (Auto)", "Dark Mode", or "Light Mode".
+  - **Window Opacity & Sizing**: Fluid presets and sliders for window opacity, width, and scale.
   - Set calculation precision (Auto or 0 to 10 decimal places).
   - Toggle behaviors like focus-loss hiding, monospace font, thousands separator, and Enter-copying.
 - **Localization**:
@@ -145,9 +148,12 @@ If you ever wish to reset all settings to default, simply exit the app, delete t
 - **交互式系统托盘**：
   - 运行时动态绘制系统托盘图标（紫色到蓝色渐变背景与白色 `=` 符号）。
   - 右键托盘菜单支持显示、打开设置或退出。
-- **现代设置对话框**：
+- **现代设置对话框与丰富个性化**：
+  - **图标与主题配色个性化**：内置柔和高级渐变（*极光紫青*、*落日余晖*、*海雾琉璃*、*松石苍翠*、*星云暮夜*、*暖茶琥珀*、*烟粉初樱*）、低饱和优雅莫兰迪纯色（*鸢尾灰紫*、*雾霾静蓝*、*鼠尾草绿*、*复古陶土*、*干枯粉黛*、*冷杉墨青*、*钛金暖灰*、*石墨冷灰*），并支持自由输入十六进制 Hex / 点选调色板进行自定义双色渐变与单色配置，支持实时动态预览。
+  - **托盘与视觉元素全局同步**：系统托盘图标、窗口图标与界面高光元素自动跟随所选配色方案重绘与渲染，保持高雅统一的视觉质感。
   - **交互式快捷键录制**：支持录制任意全局快捷键，录制 `Win+E`, `Alt+F4` 等系统快捷键时实时给出风险提示。
   - **主题与精度控制**：自由选择主题与保留小数位数 (自动或 0~10 位)。
+  - **透明度与尺寸微调**：提供预设胶囊与平滑滑块，自由调节窗口透明度、宽度与缩放比例。
   - 丰富行为开关：失去焦点隐藏、数字等宽字体、千位分隔符等。
 - **多语言支持**：
   - 原生支持 **简体中文** 与 **英国英语 (en-GB)**。

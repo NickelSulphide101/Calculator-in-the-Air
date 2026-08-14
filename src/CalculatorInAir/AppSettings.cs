@@ -20,5 +20,9 @@ namespace CalculatorInAir
         public double WindowScale { get; set; } = 1.0; // 0.8 - 1.6
         public bool UseMonospaceFont { get; set; } = false;
         public bool UseThousandsSeparator { get; set; } = false;
+        public string IconColorPreset { get; set; } = "Default"; // "Default", "SunsetGlow", "OceanMist", "PineJade", "CosmicTwilight", "WarmAmber", "SmokySakura", "MutedLavender", "SlateBlue", "SageGreen", "TerracottaClay", "DustyRose", "NordicTeal", "WarmTitanium", "Graphite", "Custom"
+        public string IconCustomColor1 { get; set; } = "#8E7DBE";
+        public string IconCustomColor2 { get; set; } = "#5C82A6";
+        public bool IconCustomIsGradient { get; set; } = true;
     }
 }

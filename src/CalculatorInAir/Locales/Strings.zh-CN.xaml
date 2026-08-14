@@ -54,4 +54,27 @@
     <sys:String x:Key="FormatRawLabel">纯数字</sys:String>
     <sys:String x:Key="FormatWanLabel">万元</sys:String>
     <sys:String x:Key="FormatRMBLabel">大写RMB</sys:String>
+    <sys:String x:Key="IconColorSetting">图标与主题配色：</sys:String>
+    <sys:String x:Key="IconColorDefault">极光紫青 (默认)</sys:String>
+    <sys:String x:Key="IconColorSunset">落日余晖</sys:String>
+    <sys:String x:Key="IconColorOcean">海雾琉璃</sys:String>
+    <sys:String x:Key="IconColorPine">松石苍翠</sys:String>
+    <sys:String x:Key="IconColorCosmic">星云暮夜</sys:String>
+    <sys:String x:Key="IconColorAmber">暖茶琥珀</sys:String>
+    <sys:String x:Key="IconColorSakura">烟粉初樱</sys:String>
+    <sys:String x:Key="IconColorLavender">鸢尾灰紫</sys:String>
+    <sys:String x:Key="IconColorSlate">雾霾静蓝</sys:String>
+    <sys:String x:Key="IconColorSage">鼠尾草绿</sys:String>
+    <sys:String x:Key="IconColorTerracotta">复古陶土</sys:String>
+    <sys:String x:Key="IconColorDustyRose">干枯粉黛</sys:String>
+    <sys:String x:Key="IconColorTeal">冷杉墨青</sys:String>
+    <sys:String x:Key="IconColorTitanium">钛金暖灰</sys:String>
+    <sys:String x:Key="IconColorGraphite">石墨冷灰</sys:String>
+    <sys:String x:Key="IconColorCustom">自定义...</sys:String>
+    <sys:String x:Key="CustomColorStart">起始色 (Hex)</sys:String>
+    <sys:String x:Key="CustomColorEnd">结束色 (Hex)</sys:String>
+    <sys:String x:Key="CustomColorGradientMode">启用双色渐变</sys:String>
+    <sys:String x:Key="CustomColorQuickPalette">雅致调色板：</sys:String>
+    <sys:String x:Key="GradientSection">柔和渐变</sys:String>
+    <sys:String x:Key="SolidSection">雅致纯色</sys:String>
 </ResourceDictionary>

@@ -124,19 +124,29 @@ namespace CalculatorInAir
             int width = iconSize.Width;
             int height = iconSize.Height;
 
+            bool isDark = true;
+            if (_settings != null)
+            {
+                if (_settings.Theme == "Light") isDark = false;
+                else if (_settings.Theme == "Dark") isDark = true;
+                else isDark = ThemeDetector.IsSystemDarkTheme();
+            }
+
+            IconColorHelper.GetGdiColors(_settings ?? new AppSettings(), isDark, out var gdi1, out var gdi2);
+
             using (var bmp = new Bitmap(width, height))
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
                     g.SmoothingMode = SmoothingMode.AntiAlias;
 
-                    // Draw a beautiful rounded rectangle background with violet-blue gradient
+                    // Draw a beautiful rounded rectangle background with configured colors
                     int margin = Math.Max(2, (int)(width * 0.0625));
                     var rect = new Rectangle(margin, margin, width - 2 * margin, height - 2 * margin);
                     using (var brush = new LinearGradientBrush(
                         rect,
-                        Color.FromArgb(139, 92, 246), // Violet
-                        Color.FromArgb(59, 130, 246),  // Blue
+                        gdi1,
+                        gdi2,
                         45f))
                     {
                         int radius = Math.Max(2, (int)(width * 0.22));
@@ -148,7 +158,7 @@ namespace CalculatorInAir
 
                     // Draw an equal sign symbol in the middle
                     float penWidth = Math.Max(1.5f, width * 0.09375f);
-                    using (var pen = new Pen(Color.White, penWidth))
+                    using (var pen = new Pen(System.Drawing.Color.White, penWidth))
                     {
                         float xStart = width * 0.28125f;
                         float xEnd = width * 0.71875f;
@@ -235,6 +245,7 @@ namespace CalculatorInAir
             }
 
             LoadThemeResource(isDark);
+            ApplyIconColor(_settings, isDark);
 
             _mainWindow?.ApplyTheme(isDark);
 
@@ -244,6 +255,45 @@ namespace CalculatorInAir
                 {
                     settingsWindow.ApplyTheme(isDark);
                 }
+            }
+
+            UpdateTrayIcon();
+        }
+
+        public void ApplyIconColor(AppSettings settings, bool isDark)
+        {
+            try
+            {
+                var iconBrush = IconColorHelper.CreateBrush(settings, isDark, isLinearHorizontal: false);
+                var resultBrush = IconColorHelper.CreateBrush(settings, isDark, isLinearHorizontal: true);
+
+                Resources["CalculatorIconBrush"] = iconBrush;
+                Resources["ResultForegroundBrush"] = resultBrush;
+                Resources["SettingsHeaderBrush"] = resultBrush;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply icon color: {ex.Message}");
+            }
+        }
+
+        public void ApplyLiveIconColorPreview(AppSettings tempSettings)
+        {
+            bool isDark = true;
+            if (tempSettings.Theme == "Light") isDark = false;
+            else if (tempSettings.Theme == "Dark") isDark = true;
+            else isDark = ThemeDetector.IsSystemDarkTheme();
+
+            ApplyIconColor(tempSettings, isDark);
+        }
+
+        public void UpdateTrayIcon()
+        {
+            if (_notifyIcon != null)
+            {
+                var oldIcon = _notifyIcon.Icon;
+                _notifyIcon.Icon = CreateDynamicIcon();
+                oldIcon?.Dispose();
             }
         }
 
