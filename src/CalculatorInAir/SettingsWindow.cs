@@ -35,6 +35,7 @@ namespace CalculatorInAir
         private ComboBox _languageComboBox = null!;
         private CheckBox _hideOnBlurCheckBox = null!;
         private CheckBox _copyOnEnterCheckBox = null!;
+        private CheckBox _enableClipboardCheckBox = null!;
         private CheckBox _useMonospaceCheckBox = null!;
         private CheckBox _useThousandsSeparatorCheckBox = null!;
         private TextBlock _hotkeyWarningText = null!;
@@ -1104,6 +1105,14 @@ namespace CalculatorInAir
             };
             _copyOnEnterCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
 
+            _enableClipboardCheckBox = new CheckBox
+            {
+                Content = Loc.Get("EnableClipboardDetection"),
+                IsChecked = _settings.EnableClipboardDetection,
+                Margin = new Thickness(0, 2, 0, 6)
+            };
+            _enableClipboardCheckBox.SetResourceReference(CheckBox.ForegroundProperty, "SettingsForegroundBrush");
+
             _useMonospaceCheckBox = new CheckBox
             {
                 Content = Loc.Get("UseMonospaceFont"),
@@ -1122,6 +1131,7 @@ namespace CalculatorInAir
 
             behaviorPanel.Children.Add(_hideOnBlurCheckBox);
             behaviorPanel.Children.Add(_copyOnEnterCheckBox);
+            behaviorPanel.Children.Add(_enableClipboardCheckBox);
             behaviorPanel.Children.Add(_useMonospaceCheckBox);
             behaviorPanel.Children.Add(_useThousandsSeparatorCheckBox);
             return behaviorPanel;
@@ -1335,6 +1345,7 @@ namespace CalculatorInAir
             // 7. Update behavior checkboxes
             _settings.HideOnBlur = _hideOnBlurCheckBox.IsChecked ?? true;
             _settings.CopyOnEnter = _copyOnEnterCheckBox.IsChecked ?? true;
+            _settings.EnableClipboardDetection = _enableClipboardCheckBox.IsChecked ?? false;
             _settings.UseMonospaceFont = _useMonospaceCheckBox.IsChecked ?? false;
             _settings.UseThousandsSeparator = _useThousandsSeparatorCheckBox.IsChecked ?? false;
 

@@ -13,6 +13,7 @@ namespace CalculatorInAir
         public int DecimalPlaces { get; set; } = -1; // -1 means Auto
         public bool HideOnBlur { get; set; } = true;
         public bool CopyOnEnter { get; set; } = true;
+        public bool EnableClipboardDetection { get; set; } = false;
         public string LanguagePreference { get; set; } = "Auto"; // "Auto", "zh_CN", "en_GB"
         public string Theme { get; set; } = "Auto"; // "Auto", "Dark", "Light"
         public int WindowOpacity { get; set; } = 100; // 30 - 100

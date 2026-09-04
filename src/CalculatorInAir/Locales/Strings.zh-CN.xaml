@@ -16,6 +16,7 @@
     <sys:String x:Key="Behavior">行为设置：</sys:String>
     <sys:String x:Key="HideOnBlur">失去焦点时自动隐藏</sys:String>
     <sys:String x:Key="CopyOnEnter">按回车键复制计算结果</sys:String>
+    <sys:String x:Key="EnableClipboardDetection">自动检测剪贴板中的数学公式</sys:String>
     <sys:String x:Key="LanguageSetting">界面语言：</sys:String>
     <sys:String x:Key="LanguageAuto">跟随系统 (Auto)</sys:String>
     <sys:String x:Key="ThemeSetting">界面主题：</sys:String>

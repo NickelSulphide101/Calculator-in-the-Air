@@ -117,6 +117,8 @@ namespace CalculatorInAir
                     return isZh ? "失去焦点时自动隐藏" : "Hide when focus is lost";
                 case "CopyOnEnter":
                     return isZh ? "按回车键复制计算结果" : "Copy result on pressing Enter";
+                case "EnableClipboardDetection":
+                    return isZh ? "自动检测剪贴板中的数学公式" : "Automatically detect formulas in clipboard";
                 case "LanguageSetting":
                     return isZh ? "界面语言：" : "Interface Language:";
                 case "LanguageAuto":

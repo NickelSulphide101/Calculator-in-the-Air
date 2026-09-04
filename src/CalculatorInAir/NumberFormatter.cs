@@ -36,8 +36,9 @@ namespace CalculatorInAir
             }
             else
             {
-                double rounded = Math.Round(val, decimalPlaces);
-                string fmt = decimalPlaces == 0 ? (useThousands ? "#,##0" : "0") : (useThousands ? "#,##0." + new string('0', decimalPlaces) : "0." + new string('0', decimalPlaces));
+                int safeDecimals = Math.Clamp(decimalPlaces, 0, 15);
+                double rounded = Math.Round(val, safeDecimals);
+                string fmt = safeDecimals == 0 ? (useThousands ? "#,##0" : "0") : (useThousands ? "#,##0." + new string('0', safeDecimals) : "0." + new string('0', safeDecimals));
                 return rounded.ToString(fmt, CultureInfo.InvariantCulture);
             }
         }

@@ -31,6 +31,7 @@ namespace CalculatorInAir
             }
         }
 
+        public const int MaxRecursionDepth = 64;
         public static double LastResult { get; set; } = 0.0;
 
         public static double Evaluate(string expression)
@@ -44,7 +45,7 @@ namespace CalculatorInAir
                 throw new ArgumentException("Empty expression");
 
             int index = 0;
-            double result = ParseExpression(tokens, ref index);
+            double result = ParseExpression(tokens, ref index, 0);
 
             if (index < tokens.Count)
             {
@@ -69,8 +70,9 @@ namespace CalculatorInAir
             }
             else
             {
-                double rounded = Math.Round(val, decimalPlaces);
-                string format = decimalPlaces == 0 ? "0" : "0." + new string('0', decimalPlaces);
+                int safePlaces = Math.Clamp(decimalPlaces, 0, 15);
+                double rounded = Math.Round(val, safePlaces);
+                string format = safePlaces == 0 ? "0" : "0." + new string('0', safePlaces);
                 return rounded.ToString(format, CultureInfo.InvariantCulture);
             }
         }
@@ -180,28 +182,34 @@ namespace CalculatorInAir
             return tokens;
         }
 
-        private static double ParseExpression(List<Token> tokens, ref int index)
+        private static double ParseExpression(List<Token> tokens, ref int index, int depth)
         {
-            double result = ParseTerm(tokens, ref index);
+            if (depth > MaxRecursionDepth)
+                throw new ArgumentException("Expression exceeds maximum recursion depth");
+
+            double result = ParseTerm(tokens, ref index, depth);
             while (index < tokens.Count && (tokens[index].Type == TokenType.Plus || tokens[index].Type == TokenType.Minus))
             {
                 var op = tokens[index].Type;
                 index++;
-                double right = ParseTerm(tokens, ref index);
+                double right = ParseTerm(tokens, ref index, depth);
                 if (op == TokenType.Plus) result += right;
                 else result -= right;
             }
             return result;
         }
 
-        private static double ParseTerm(List<Token> tokens, ref int index)
+        private static double ParseTerm(List<Token> tokens, ref int index, int depth)
         {
-            double result = ParseUnary(tokens, ref index);
+            if (depth > MaxRecursionDepth)
+                throw new ArgumentException("Expression exceeds maximum recursion depth");
+
+            double result = ParseUnary(tokens, ref index, depth);
             while (index < tokens.Count && (tokens[index].Type == TokenType.Multiply || tokens[index].Type == TokenType.Divide || tokens[index].Type == TokenType.Modulo))
             {
                 var op = tokens[index].Type;
                 index++;
-                double right = ParseUnary(tokens, ref index);
+                double right = ParseUnary(tokens, ref index, depth);
                 if (op == TokenType.Multiply)
                 {
                     result *= right;
@@ -220,32 +228,47 @@ namespace CalculatorInAir
             return result;
         }
 
-        private static double ParseFactor(List<Token> tokens, ref int index)
+        private static double ParseFactor(List<Token> tokens, ref int index, int depth)
         {
-            double result = ParsePrimary(tokens, ref index);
+            if (depth > MaxRecursionDepth)
+                throw new ArgumentException("Expression exceeds maximum recursion depth");
+
+            double result = ParsePrimary(tokens, ref index, depth);
             if (index < tokens.Count && tokens[index].Type == TokenType.Power)
             {
                 index++;
-                double right = ParseUnary(tokens, ref index);
+                double right = ParseUnary(tokens, ref index, depth + 1);
                 result = Math.Pow(result, right);
             }
             return result;
         }
 
-        private static double ParseUnary(List<Token> tokens, ref int index)
+        private static double ParseUnary(List<Token> tokens, ref int index, int depth)
         {
-            if (index < tokens.Count && (tokens[index].Type == TokenType.Plus || tokens[index].Type == TokenType.Minus))
+            if (depth > MaxRecursionDepth)
+                throw new ArgumentException("Expression exceeds maximum recursion depth");
+
+            int sign = 1;
+            bool hasUnary = false;
+            while (index < tokens.Count && (tokens[index].Type == TokenType.Plus || tokens[index].Type == TokenType.Minus))
             {
-                var op = tokens[index].Type;
+                hasUnary = true;
+                if (tokens[index].Type == TokenType.Minus)
+                {
+                    sign = -sign;
+                }
                 index++;
-                double val = ParseUnary(tokens, ref index);
-                return op == TokenType.Plus ? val : -val;
             }
-            return ParseFactor(tokens, ref index);
+
+            double val = ParseFactor(tokens, ref index, depth);
+            return hasUnary && sign == -1 ? -val : val;
         }
 
-        private static double ParsePrimary(List<Token> tokens, ref int index)
+        private static double ParsePrimary(List<Token> tokens, ref int index, int depth)
         {
+            if (depth > MaxRecursionDepth)
+                throw new ArgumentException("Expression exceeds maximum recursion depth");
+
             if (index >= tokens.Count)
                 throw new ArgumentException("Unexpected end of expression");
 
@@ -262,7 +285,7 @@ namespace CalculatorInAir
             else if (token.Type == TokenType.LParen)
             {
                 index++; // consume '('
-                double val = ParseExpression(tokens, ref index);
+                double val = ParseExpression(tokens, ref index, depth + 1);
                 if (index >= tokens.Count || tokens[index].Type != TokenType.RParen)
                 {
                     throw new ArgumentException("Mismatched parenthesis");

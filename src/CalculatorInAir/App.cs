@@ -54,8 +54,9 @@ namespace CalculatorInAir
 
             DispatcherUnhandledException += (s, args) =>
             {
+                SettingsManager.LogException(args.Exception);
                 System.Windows.MessageBox.Show(
-                    $"Unhandled UI Exception:\n\n{args.Exception.Message}\n\n{args.Exception.StackTrace}",
+                    $"An unexpected UI error occurred:\n\n{args.Exception.Message}\n\nDetails have been logged to the application crash log.",
                     "Calculator in the Air - Exception",
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Error

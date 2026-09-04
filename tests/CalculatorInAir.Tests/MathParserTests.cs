@@ -73,5 +73,39 @@ namespace CalculatorInAir.Tests
             double result = MathParser.Evaluate(expr);
             Assert.Equal(expected, result, 9);
         }
+
+        [Fact]
+        public void Evaluate_DeeplyNestedParentheses_ShouldThrowArgumentExceptionInsteadOfStackOverflow()
+        {
+            // Nest parentheses deeper than MaxRecursionDepth (64)
+            string expr = new string('(', 70) + "1" + new string(')', 70);
+            Assert.Throws<ArgumentException>(() => MathParser.Evaluate(expr));
+        }
+
+        [Fact]
+        public void Evaluate_LongChainOfUnarySigns_ShouldEvaluateIterativelyWithoutStackOverflow()
+        {
+            // 200 minus signs before 5 should evaluate to +5
+            string exprEven = new string('-', 200) + "5";
+            Assert.Equal(5.0, MathParser.Evaluate(exprEven));
+
+            // 201 minus signs before 5 should evaluate to -5
+            string exprOdd = new string('-', 201) + "5";
+            Assert.Equal(-5.0, MathParser.Evaluate(exprOdd));
+        }
+
+        [Theory]
+        [InlineData(20)]
+        [InlineData(100)]
+        [InlineData(-5)]
+        public void Format_ExtremeDecimalPlaces_ShouldClampSafelyWithoutThrowing(int decimals)
+        {
+            // Should not throw ArgumentOutOfRangeException
+            string result = NumberFormatter.FormatStandard(12.3456789, decimals, false);
+            Assert.NotNull(result);
+
+            string result2 = MathParser.FormatResult(12.3456789, decimals);
+            Assert.NotNull(result2);
+        }
     }
 }

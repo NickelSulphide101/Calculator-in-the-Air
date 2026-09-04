@@ -16,6 +16,7 @@
     <sys:String x:Key="Behavior">Behavior Settings:</sys:String>
     <sys:String x:Key="HideOnBlur">Hide when focus is lost</sys:String>
     <sys:String x:Key="CopyOnEnter">Copy result on pressing Enter</sys:String>
+    <sys:String x:Key="EnableClipboardDetection">Automatically detect formulas in clipboard</sys:String>
     <sys:String x:Key="LanguageSetting">Interface Language:</sys:String>
     <sys:String x:Key="LanguageAuto">Follow System (Auto)</sys:String>
     <sys:String x:Key="ThemeSetting">Theme:</sys:String>

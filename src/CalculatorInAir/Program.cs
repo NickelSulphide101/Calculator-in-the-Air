@@ -9,8 +9,8 @@ namespace CalculatorInAir
     {
         private static Mutex? _mutex;
 
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern uint RegisterWindowMessage(string lpString);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -27,19 +27,32 @@ namespace CalculatorInAir
         [DllImport("user32.dll")]
         private static extern bool AllowSetForegroundWindow(int dwProcessId);
 
-        private const string MutexName = "Local\\CalculatorInTheAirMutex-984F-4B8A-A2E4";
-        private const int WM_USER_WAKEUP = 0x0400 + 101;
+        public static uint WakeupMessage { get; private set; } = 0x0400 + 101;
+
+        private static string GetMutexName()
+        {
+            string user = Environment.UserName;
+            return $"Local\\CalculatorInTheAir_{user}_984F-4B8A-A2E4";
+        }
 
         [STAThread]
         public static void Main()
         {
+            // Register collision-free unique window message for single-instance IPC
+            uint registeredMsg = RegisterWindowMessage("CalculatorInAir_Wakeup_984F4B8AA2E4");
+            if (registeredMsg != 0)
+            {
+                WakeupMessage = registeredMsg;
+            }
+
             // Register global exception logger
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 if (args.ExceptionObject is Exception ex)
                 {
+                    SettingsManager.LogException(ex);
                     System.Windows.MessageBox.Show(
-                        $"Fatal Application Exception:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                        $"A fatal error occurred:\n\n{ex.Message}\n\nDetails have been logged to the application crash log.",
                         "Calculator in the Air - Fatal Error",
                         System.Windows.MessageBoxButton.OK,
                         System.Windows.MessageBoxImage.Error
@@ -51,7 +64,7 @@ namespace CalculatorInAir
             bool isNewInstance = false;
             try
             {
-                _mutex = new Mutex(true, MutexName, out isNewInstance);
+                _mutex = new Mutex(true, GetMutexName(), out isNewInstance);
             }
             catch (AbandonedMutexException)
             {
@@ -62,43 +75,56 @@ namespace CalculatorInAir
             {
                 try
                 {
-                    // If an instance already exists, wake it up by posting WM_USER_WAKEUP to all windows of the existing process
+                    // If an instance already exists, wake it up by posting WakeupMessage to windows of verified process
                     int currentPid = Environment.ProcessId;
+                    string currentExePath = Environment.ProcessPath ?? "";
                     var processes = Process.GetProcessesByName("CalculatorInAir");
-                    bool awakened = false;
 
-                    foreach (var p in processes)
+                    try
                     {
-                        if (p.Id != currentPid)
+                        foreach (var p in processes)
                         {
-                            AllowSetForegroundWindow(p.Id);
-                            EnumWindows((hWnd, lParam) =>
+                            if (p.Id != currentPid)
                             {
-                                GetWindowThreadProcessId(hWnd, out uint pid);
-                                if (pid == p.Id)
+                                try
                                 {
-                                    PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
-                                    awakened = true;
+                                    // Validate that the target process is running from the same executable path
+                                    string? targetPath = p.MainModule?.FileName;
+                                    if (string.IsNullOrEmpty(currentExePath) || string.IsNullOrEmpty(targetPath) ||
+                                        string.Equals(currentExePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        AllowSetForegroundWindow(p.Id);
+                                        EnumWindows((hWnd, lParam) =>
+                                        {
+                                            GetWindowThreadProcessId(hWnd, out uint pid);
+                                            if (pid == p.Id)
+                                            {
+                                                PostMessage(hWnd, WakeupMessage, IntPtr.Zero, IntPtr.Zero);
+                                            }
+                                            return true;
+                                        }, IntPtr.Zero);
+                                    }
                                 }
-                                return true;
-                            }, IntPtr.Zero);
+                                catch { }
+                            }
                         }
                     }
-
-                    if (!awakened)
+                    finally
                     {
-                        IntPtr hWnd = FindWindow(null, "Calculator in the Air");
-                        if (hWnd != IntPtr.Zero)
+                        // Clean up all process handles
+                        foreach (var p in processes)
                         {
-                            GetWindowThreadProcessId(hWnd, out uint pid);
-                            AllowSetForegroundWindow((int)pid);
-                            PostMessage(hWnd, WM_USER_WAKEUP, IntPtr.Zero, IntPtr.Zero);
+                            try { p.Dispose(); } catch { }
                         }
                     }
                 }
                 catch { }
+                finally
+                {
+                    // Release mutex handle and exit second process
+                    _mutex?.Dispose();
+                }
 
-                // Release mutex handle and exit second process
                 return;
             }
 
@@ -109,8 +135,11 @@ namespace CalculatorInAir
             }
             finally
             {
-                _mutex.ReleaseMutex();
-                _mutex.Dispose();
+                if (_mutex != null)
+                {
+                    try { _mutex.ReleaseMutex(); } catch { }
+                    _mutex.Dispose();
+                }
             }
         }
     }

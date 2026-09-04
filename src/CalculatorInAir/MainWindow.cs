@@ -31,7 +31,6 @@ namespace CalculatorInAir
     {
         private const int HOTKEY_ID = 9000;
         private const int WM_HOTKEY = 0x0312;
-        private const int WM_USER_WAKEUP = 0x0400 + 101;
 
         private double _heightCollapsed = 109;
         private double _heightExpanded = 166;
@@ -269,7 +268,8 @@ namespace CalculatorInAir
                 BorderThickness = new Thickness(0),
                 FontSize = 18,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                FontWeight = FontWeights.Normal
+                FontWeight = FontWeights.Normal,
+                MaxLength = 500
             };
             _inputTextBox.SetResourceReference(TextBox.ForegroundProperty, "InputForegroundBrush");
             _inputTextBox.SetResourceReference(TextBox.CaretBrushProperty, "InputCaretBrush");
@@ -488,6 +488,15 @@ namespace CalculatorInAir
             if (_settings.Shift) modifiers |= 0x0004;
             if (_settings.Win) modifiers |= 0x0008;
 
+            // Security guard: Ensure at least one modifier key is set to prevent globally hijacking a bare key
+            if (modifiers == 0)
+            {
+                modifiers = 0x0001; // Fallback to Alt
+                _settings.Alt = true;
+                _settings.VirtualKey = 0x20;
+                _settings.HotkeyDisplay = "Alt + Space";
+            }
+
             bool success = RegisterHotKey(_hwnd, HOTKEY_ID, modifiers, (uint)_settings.VirtualKey);
             if (!success)
             {
@@ -512,7 +521,7 @@ namespace CalculatorInAir
                 ToggleWindow();
                 handled = true;
             }
-            else if (msg == WM_USER_WAKEUP)
+            else if (msg == (int)Program.WakeupMessage)
             {
                 ShowWindow();
                 handled = true;
@@ -691,6 +700,12 @@ namespace CalculatorInAir
 
         private void CheckClipboardForFormula()
         {
+            if (!_settings.EnableClipboardDetection)
+            {
+                HideClipboardHint();
+                return;
+            }
+
             try
             {
                 if (!Clipboard.ContainsText()) { HideClipboardHint(); return; }
