@@ -107,5 +107,16 @@ namespace CalculatorInAir.Tests
             string result2 = MathParser.FormatResult(12.3456789, decimals);
             Assert.NotNull(result2);
         }
+
+        [Fact]
+        public void Evaluate_WithoutUpdatingLastResult_ShouldKeepPreviousLastResult()
+        {
+            MathParser.Evaluate("100", updateLastResult: true);
+            Assert.Equal(100.0, MathParser.LastResult);
+
+            double val = MathParser.Evaluate("200 + 50", updateLastResult: false);
+            Assert.Equal(250.0, val);
+            Assert.Equal(100.0, MathParser.LastResult);
+        }
     }
 }

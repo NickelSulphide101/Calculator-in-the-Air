@@ -48,6 +48,7 @@ namespace CalculatorInAir
         private bool _isShowing = false;
         private bool _isPinned = false;
         private DateTime _lastEscPressTime = DateTime.MinValue;
+        private DateTime _lastWakeupMessageTime = DateTime.MinValue;
 
         // UI Controls & Transforms
         private Border _mainBorder = null!;
@@ -523,7 +524,12 @@ namespace CalculatorInAir
             }
             else if (msg == (int)Program.WakeupMessage)
             {
-                ShowWindow();
+                var now = DateTime.UtcNow;
+                if ((now - _lastWakeupMessageTime).TotalMilliseconds >= 500)
+                {
+                    _lastWakeupMessageTime = now;
+                    ShowWindow();
+                }
                 handled = true;
             }
             return IntPtr.Zero;
@@ -712,12 +718,31 @@ namespace CalculatorInAir
                 string text = Clipboard.GetText().Trim();
                 if (string.IsNullOrEmpty(text) || text.Length < 2 || text.Length > 100) { HideClipboardHint(); return; }
 
-                bool hasOperator = text.Contains('+') || text.Contains('-') || text.Contains('*') || text.Contains('/') || text.Contains('%') || text.Contains('^') || text.Contains('(');
+                // Strict whitelist: Only allow digits, whitespace, decimal point, standard math operators, and scientific notation
+                bool isMathChar(char ch) =>
+                    char.IsDigit(ch) || char.IsWhiteSpace(ch) ||
+                    ch == '+' || ch == '-' || ch == '−' || ch == '*' || ch == '×' || ch == '✕' ||
+                    ch == '/' || ch == '÷' || ch == '%' || ch == '^' || ch == '(' || ch == ')' ||
+                    ch == '.' || ch == 'e' || ch == 'E';
+
+                for (int idx = 0; idx < text.Length; idx++)
+                {
+                    if (!isMathChar(text[idx])) { HideClipboardHint(); return; }
+                }
+
+                bool hasOperator = text.Contains('+') || text.Contains('-') || text.Contains('−') ||
+                                   text.Contains('*') || text.Contains('×') || text.Contains('✕') ||
+                                   text.Contains('/') || text.Contains('÷') || text.Contains('%') ||
+                                   text.Contains('^') || text.Contains('(');
                 if (!hasOperator) { HideClipboardHint(); return; }
 
-                MathParser.Evaluate(text);
+                // Verify calculation safely without mutating global LastResult
+                MathParser.Evaluate(text, updateLastResult: false);
                 _clipboardDetectedFormula = text;
-                _clipboardHintTextBlock.Text = string.Format(Loc.Get("ClipboardHint"), text);
+
+                // Truncate displayed formula for UI presentation and privacy
+                string displayFormula = text.Length > 35 ? text.Substring(0, 32) + "..." : text;
+                _clipboardHintTextBlock.Text = string.Format(Loc.Get("ClipboardHint"), displayFormula);
                 _clipboardHintBorder.Visibility = Visibility.Visible;
             }
             catch
@@ -761,7 +786,8 @@ namespace CalculatorInAir
 
             try
             {
-                double val = MathParser.Evaluate(text);
+                // Evaluate preview without mutating global LastResult on intermediate keystrokes
+                double val = MathParser.Evaluate(text, updateLastResult: false);
                 BuildFormatCandidates(val);
                 UpdateResultDisplay();
                 ShowResultBorder();
@@ -913,6 +939,13 @@ namespace CalculatorInAir
                     }
 
                     AddToHistory(_inputTextBox.Text);
+
+                    // Commit confirmed calculation result to MathParser.LastResult
+                    try
+                    {
+                        MathParser.Evaluate(text, updateLastResult: true);
+                    }
+                    catch { }
 
                     string toastMsg = (isShift ? Loc.Get("CopiedFormula") : Loc.Get("CopiedResult")) + copyText;
                     ShowToast(toastMsg);
@@ -1097,6 +1130,9 @@ namespace CalculatorInAir
 
         public void ApplyWindowLayout(double width, double scale, int opacityPercent, bool isInitializing = false)
         {
+            if (double.IsNaN(width) || double.IsInfinity(width)) width = 600.0;
+            if (double.IsNaN(scale) || double.IsInfinity(scale)) scale = 1.0;
+
             _windowWidth = Math.Clamp(width, 420.0, 900.0);
             _windowScale = Math.Clamp(scale, 0.8, 1.6);
             _targetOpacity = Math.Clamp(opacityPercent / 100.0, 0.3, 1.0);

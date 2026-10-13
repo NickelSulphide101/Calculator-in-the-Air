@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -73,6 +74,7 @@ namespace CalculatorInAir
 
             if (!isNewInstance)
             {
+                bool instanceFound = false;
                 try
                 {
                     // If an instance already exists, wake it up by posting WakeupMessage to windows of verified process
@@ -88,11 +90,12 @@ namespace CalculatorInAir
                             {
                                 try
                                 {
-                                    // Validate that the target process is running from the same executable path
+                                    // Strictly validate that the target process is running from the exact same executable path (fail-closed)
                                     string? targetPath = p.MainModule?.FileName;
-                                    if (string.IsNullOrEmpty(currentExePath) || string.IsNullOrEmpty(targetPath) ||
-                                        string.Equals(currentExePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                                    if (!string.IsNullOrEmpty(currentExePath) && !string.IsNullOrEmpty(targetPath) &&
+                                        string.Equals(Path.GetFullPath(currentExePath), Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
                                     {
+                                        instanceFound = true;
                                         AllowSetForegroundWindow(p.Id);
                                         EnumWindows((hWnd, lParam) =>
                                         {
@@ -121,11 +124,18 @@ namespace CalculatorInAir
                 catch { }
                 finally
                 {
-                    // Release mutex handle and exit second process
-                    _mutex?.Dispose();
+                    if (instanceFound)
+                    {
+                        // Release mutex handle and exit second process only if genuine instance was verified and messaged
+                        _mutex?.Dispose();
+                    }
                 }
 
-                return;
+                if (instanceFound)
+                {
+                    return;
+                }
+                // If mutex was held but no genuine instance was running (e.g. mutex squatting / orphaned handle), continue launch
             }
 
             try

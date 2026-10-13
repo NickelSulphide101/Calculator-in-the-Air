@@ -1299,6 +1299,18 @@ namespace CalculatorInAir
                 return;
             }
 
+            // Guard against hijacking critical OS and productivity shortcuts (e.g. Ctrl+C, Ctrl+V, Alt+F4)
+            if (IsCriticalSystemShortcut(_recordedCtrl, _recordedAlt, _recordedShift, _recordedWin, _recordedVk))
+            {
+                System.Windows.MessageBox.Show(
+                    Loc.Get("HotkeySystemConflict"),
+                    Loc.Get("HotkeyWarningTitle"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning
+                );
+                return;
+            }
+
             // 1. Update hotkey config
             _settings.Ctrl = _recordedCtrl;
             _settings.Alt = _recordedAlt;
@@ -1406,6 +1418,30 @@ namespace CalculatorInAir
             }
             if (ctrl && shift && !alt && !win && vk == 0x1B)
                 return true;
+            if (ctrl && alt && !shift && !win && vk == 0x2E)
+                return true;
+
+            return IsCriticalSystemShortcut(ctrl, alt, shift, win, vk);
+        }
+
+        private static bool IsCriticalSystemShortcut(bool ctrl, bool alt, bool shift, bool win, int vk)
+        {
+            // Ctrl + C / V / X / Z / A (Standard clipboard and editing operations)
+            if (ctrl && !alt && !shift && !win)
+            {
+                if (vk == 0x43 || vk == 0x56 || vk == 0x58 || vk == 0x5A || vk == 0x41)
+                    return true;
+            }
+            // Alt + F4 (Window close) or Alt + Tab (Window switcher)
+            if (alt && !ctrl && !win && !shift)
+            {
+                if (vk == 0x73 || vk == 0x09)
+                    return true;
+            }
+            // Ctrl + Shift + Esc (Task Manager)
+            if (ctrl && shift && !alt && !win && vk == 0x1B)
+                return true;
+            // Ctrl + Alt + Delete (Windows Security)
             if (ctrl && alt && !shift && !win && vk == 0x2E)
                 return true;
 

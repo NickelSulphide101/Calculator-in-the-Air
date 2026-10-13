@@ -32,9 +32,28 @@ namespace CalculatorInAir
         }
 
         public const int MaxRecursionDepth = 64;
-        public static double LastResult { get; set; } = 0.0;
+        private static readonly object _syncLock = new object();
+        private static double _lastResult = 0.0;
 
-        public static double Evaluate(string expression)
+        public static double LastResult
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _lastResult;
+                }
+            }
+            set
+            {
+                lock (_syncLock)
+                {
+                    _lastResult = value;
+                }
+            }
+        }
+
+        public static double Evaluate(string expression, bool updateLastResult = true)
         {
             string trimmed = expression.Trim();
             if (string.IsNullOrEmpty(trimmed))
@@ -52,7 +71,10 @@ namespace CalculatorInAir
                 throw new ArgumentException($"Unexpected token at the end: '{tokens[index].Value}'");
             }
 
-            LastResult = result;
+            if (updateLastResult)
+            {
+                LastResult = result;
+            }
             return result;
         }
 
